@@ -194,14 +194,18 @@ const Settings = () => {
       
       // 尝试创建测试文件
       const testPath = `${values.path}/test-connection.txt`;
+      
+      // 使用TextEncoder替代Buffer进行编码
+      const encoder = new TextEncoder();
       const testContent = `测试连接 - ${new Date().toISOString()}`;
+      const content = btoa(String.fromCharCode.apply(null, encoder.encode(testContent)));
       
       await octokit.repos.createOrUpdateFileContents({
         owner: values.owner,
         repo: values.repo,
         path: testPath,
         message: '测试连接',
-        content: Buffer.from(testContent).toString('base64'),
+        content: content,
         branch: values.branch
       });
       
