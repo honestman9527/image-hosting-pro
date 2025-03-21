@@ -1,0 +1,13 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+# 设置环境变量（如果需要）
+# [build.environment]
+#   VARIABLE_NAME = "value"
+
+# 重定向设置，确保SPA路由正常工作
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

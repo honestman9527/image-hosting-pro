@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Typography, List, Button, Empty, Card, Image, Popconfirm, message, DatePicker } from 'antd';
-import { CopyOutlined, DeleteOutlined, CalendarOutlined } from '@ant-design/icons';
+import { Typography, List, Button, Empty, Card, Image, Popconfirm, message, DatePicker, Dropdown, Space } from 'antd';
+import { CopyOutlined, DeleteOutlined, CalendarOutlined, DownOutlined } from '@ant-design/icons';
 import './History.css';
 
 const { Title, Paragraph } = Typography;
@@ -10,6 +10,17 @@ const History = () => {
   const [history, setHistory] = useState([]);
   const [filteredHistory, setFilteredHistory] = useState([]);
   const [dateRange, setDateRange] = useState(null);
+  const [settings, setSettings] = useState(() => {
+    const savedSettings = localStorage.getItem('github-settings');
+    return savedSettings ? JSON.parse(savedSettings) : {
+      token: '',
+      owner: '',
+      repo: '',
+      branch: 'main',
+      path: 'images',
+      customDomain: ''
+    };
+  });
 
   // 从本地存储加载历史记录
   useEffect(() => {
@@ -23,6 +34,28 @@ const History = () => {
     navigator.clipboard.writeText(text)
       .then(() => message.success('链接已复制到剪贴板'))
       .catch(err => message.error('复制失败: ' + err));
+  };
+
+  // 生成不同格式的链接
+  const generateLinks = (item) => {
+    // 原始链接
+    const originalUrl = item.url;
+    
+    // Markdown格式
+    const markdownUrl = `![${item.name}](${originalUrl})`;
+    
+    // HTML格式
+    const htmlUrl = `<img src="${originalUrl}" alt="${item.name}" />`;
+    
+    // BBCode格式
+    const bbcodeUrl = `[img]${originalUrl}[/img]`;
+    
+    return {
+      original: originalUrl,
+      markdown: markdownUrl,
+      html: htmlUrl,
+      bbcode: bbcodeUrl
+    };
   };
 
   // 删除记录
@@ -132,51 +165,84 @@ const History = () => {
                 className="history-list"
                 itemLayout="horizontal"
                 dataSource={group.items}
-                renderItem={(item, index) => (
-                  <List.Item>
-                    <Card className="history-card">
-                      <div className="history-card-content">
-                        <div className="history-image-container">
-                          <Image
-                            src={item.url}
-                            alt={item.name}
-                            className="history-image"
-                          />
+                renderItem={(item, index) => {
+                  const links = generateLinks(item);
+                  return (
+                    <List.Item>
+                      <Card className="history-card">
+                        <div className="history-card-content">
+                          <div className="history-image-container">
+                            <Image
+                              src={item.url}
+                              alt={item.name}
+                              className="history-image"
+                            />
+                          </div>
+                          <div className="history-item-info">
+                            <h4>{item.name}</h4>
+                            <p>大小: {(item.size / 1024).toFixed(1)} KB</p>
+                            <p>上传时间: {new Date(item.date).toLocaleString()}</p>
+                            <p className="history-item-url">{item.url}</p>
+                          </div>
                         </div>
-                        <div className="history-item-info">
-                          <h4>{item.name}</h4>
-                          <p>大小: {(item.size / 1024).toFixed(1)} KB</p>
-                          <p>上传时间: {new Date(item.date).toLocaleString()}</p>
-                          <p className="history-item-url">{item.url}</p>
-                        </div>
-                      </div>
-                      <div className="history-item-actions">
-                        <Button 
-                          type="text" 
-                          icon={<CopyOutlined />} 
-                          onClick={() => copyToClipboard(item.url)}
-                        >
-                          复制链接
-                        </Button>
-                        <Popconfirm
-                          title="确定要删除这条记录吗？"
-                          description="删除后将无法恢复，但不会从GitHub仓库中删除图片。"
-                          onConfirm={() => deleteRecord(history.findIndex(h => h.date === item.date && h.name === item.name))}
-                          okText="确定"
-                          cancelText="取消"
-                        >
-                          <Button 
-                            type="text" 
-                            danger 
-                            icon={<DeleteOutlined />}
+                        <div className="history-item-actions">
+                          <Dropdown
+                            menu={{
+                              items: [
+                                {
+                                  key: 'original',
+                                  label: (
+                                    <a onClick={() => copyToClipboard(links.original)}>原始链接</a>
+                                  ),
+                                },
+                                {
+                                  key: 'markdown',
+                                  label: (
+                                    <a onClick={() => copyToClipboard(links.markdown)}>Markdown格式</a>
+                                  ),
+                                },
+                                {
+                                  key: 'html',
+                                  label: (
+                                    <a onClick={() => copyToClipboard(links.html)}>HTML格式</a>
+                                  ),
+                                },
+                                {
+                                  key: 'bbcode',
+                                  label: (
+                                    <a onClick={() => copyToClipboard(links.bbcode)}>BBCode格式</a>
+                                  ),
+                                },
+                              ],
+                            }}
                           >
-                            删除记录
-                          </Button>
-                        </Popconfirm>
-                      </div>
-                    </Card>
-                  </List.Item>
-                )}
+                            <Button type="text" icon={<CopyOutlined />}>
+                              <Space>
+                                复制链接
+                                <DownOutlined />
+                              </Space>
+                            </Button>
+                          </Dropdown>
+                          <Popconfirm
+                            title="确定要删除这条记录吗？"
+                            description="删除后将无法恢复，但不会从GitHub仓库中删除图片。"
+                            onConfirm={() => deleteRecord(history.findIndex(h => h.date === item.date && h.name === item.name))}
+                            okText="确定"
+                            cancelText="取消"
+                          >
+                            <Button 
+                              type="text" 
+                              danger 
+                              icon={<DeleteOutlined />}
+                            >
+                              删除记录
+                            </Button>
+                          </Popconfirm>
+                        </div>
+                      </Card>
+                    </List.Item>
+                  );
+                }}
               />
             </div>
           ))}

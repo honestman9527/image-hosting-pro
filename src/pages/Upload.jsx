@@ -14,6 +14,7 @@ const UploadPage = () => {
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [compressImages, setCompressImages] = useState(true);
+  const [convertToWebP, setConvertToWebP] = useState(false);
   const [settings, setSettings] = useState(() => {
     const savedSettings = localStorage.getItem('github-settings');
     return savedSettings ? JSON.parse(savedSettings) : {
@@ -61,17 +62,55 @@ const UploadPage = () => {
         return;
       }
 
-      new Compressor(file, {
+      // 获取文件类型
+      const fileType = file.type;
+      const fileName = file.name;
+      const fileExt = fileName.split('.').pop().toLowerCase();
+      
+      // 压缩配置
+      const options = {
+        // 基本配置
         quality: 0.8,
+        // 如果选择转换为WebP格式
+        mimeType: convertToWebP ? 'image/webp' : undefined,
+        // 针对不同格式的特殊配置
+        ...(/^image\/png/.test(fileType) ? {
+          // PNG特殊配置 - PNG通常压缩效果有限
+          quality: 0.75,
+          convertSize: 500000, // 500KB以上的PNG进行压缩
+          strict: true, // 严格模式
+          checkOrientation: true,
+        } : {}),
+        ...(/^image\/jpe?g/.test(fileType) ? {
+          // JPEG特殊配置
+          quality: 0.8,
+        } : {}),
+        ...(/^image\/gif/.test(fileType) ? {
+          // GIF特殊配置 - 注意GIF压缩可能会失去动画效果
+          quality: 0.7,
+        } : {}),
         success(result) {
           resolve(result);
         },
         error(err) {
-          console.error('压缩图片失败:', err);
-          reject(err);
+          console.error(`压缩图片失败 (${fileExt}):`, err);
+          // 如果压缩失败，返回原始文件
+          resolve(file);
         },
-      });
+      };
+
+      new Compressor(file, options);
     });
+  };
+
+  // 生成随机字符串
+  const generateRandomString = (length = 10) => {
+    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let result = '';
+    for (let i = 0; i < length; i++) {
+      result += characters.charAt(Math.floor(Math.random() * characters.length));
+    }
+    return result;
   };
 
   // 上传单个文件到GitHub
@@ -95,8 +134,14 @@ const UploadPage = () => {
       
       // 生成文件路径
       const date = new Date();
-      const timestamp = `${date.getFullYear()}${(date.getMonth() + 1).toString().padStart(2, '0')}${date.getDate().toString().padStart(2, '0')}${date.getHours().toString().padStart(2, '0')}${date.getMinutes().toString().padStart(2, '0')}${date.getSeconds().toString().padStart(2, '0')}`;
-      const fileName = `${timestamp}_${fileObj.name}`;
+      const timestamp = `${date.getFullYear()}${(date.getMonth() + 1).toString().padStart(2, '0')}${date.getDate().toString().padStart(2, '0')}`;
+      const randomString = generateRandomString(8);
+      // 获取文件扩展名，如果转换为WebP则修改扩展名
+      let fileExt = fileObj.name.split('.').pop();
+      if (convertToWebP) {
+        fileExt = 'webp';
+      }
+      const fileName = `${timestamp}_${randomString}.${fileExt}`;
       const filePath = `${settings.path}/${fileName}`;
       
       // 上传文件到GitHub
@@ -112,7 +157,7 @@ const UploadPage = () => {
       // 生成图片URL
       let imageUrl;
       if (settings.customDomain) {
-        imageUrl = `${settings.customDomain}/${filePath}`;
+        imageUrl = `${settings.customDomain}/${settings.owner}/${settings.repo}/${settings.branch}/${filePath}`;
       } else {
         imageUrl = `https://raw.githubusercontent.com/${settings.owner}/${settings.repo}/${settings.branch}/${filePath}`;
       }
@@ -260,6 +305,16 @@ const UploadPage = () => {
               unCheckedChildren="关闭"
             />
             <span className="option-description">开启后将压缩图片以节省空间</span>
+          </Form.Item>
+          <Form.Item label="转换为WebP格式">
+            <Switch 
+              checked={convertToWebP} 
+              onChange={setConvertToWebP} 
+              checkedChildren="开启" 
+              unCheckedChildren="关闭"
+              disabled={!compressImages}
+            />
+            <span className="option-description">开启后将所有图片转换为WebP格式，体积更小（推荐用于PNG图片）</span>
           </Form.Item>
         </Form>
       </Card>
