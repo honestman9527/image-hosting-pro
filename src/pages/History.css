@@ -1,0 +1,139 @@
+/* History页面样式 */
+.history-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.history-header {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.history-filters {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.date-filter {
+  flex: 1;
+  max-width: 400px;
+}
+
+.empty-container {
+  margin: 40px 0;
+  padding: 24px;
+  background-color: #fafafa;
+  border-radius: 4px;
+  text-align: center;
+}
+
+.history-timeline {
+  margin-top: 20px;
+}
+
+.history-group {
+  margin-bottom: 30px;
+}
+
+.history-date {
+  font-size: 16px;
+  font-weight: 500;
+  padding: 8px 16px;
+  background-color: #f5f5f5;
+  border-radius: 4px;
+  margin-bottom: 16px;
+}
+
+.history-list {
+  margin-top: 10px;
+}
+
+.history-card {
+  margin-bottom: 16px;
+  transition: all 0.3s;
+}
+
+.history-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.history-card-content {
+  display: flex;
+  flex-direction: row;
+}
+
+.history-image-container {
+  width: 120px;
+  height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #f5f5f5;
+  margin-right: 16px;
+  flex-shrink: 0;
+}
+
+.history-image {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.history-item-info {
+  flex: 1;
+}
+
+.history-item-info h4 {
+  margin-top: 0;
+  margin-bottom: 8px;
+  font-weight: 500;
+}
+
+.history-item-info p {
+  margin-bottom: 4px;
+  color: #666;
+  font-size: 14px;
+}
+
+.history-item-url {
+  word-break: break-all;
+  color: #1890ff;
+  font-size: 12px;
+}
+
+.history-item-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 12px;
+  border-top: 1px solid #f0f0f0;
+  padding-top: 12px;
+}
+
+@media (max-width: 768px) {
+  .history-card-content {
+    flex-direction: column;
+  }
+  
+  .history-image-container {
+    width: 100%;
+    height: 180px;
+    margin-right: 0;
+    margin-bottom: 16px;
+  }
+  
+  .date-filter {
+    max-width: 100%;
+  }
+  
+  .history-filters {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .history-filters button {
+    margin-top: 12px;
+  }
+}

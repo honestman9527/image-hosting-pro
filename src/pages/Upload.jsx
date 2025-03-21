@@ -1,0 +1,343 @@
+import React, { useState, useCallback } from 'react';
+import { Typography, Card, Upload, Button, message, Progress, Switch, Input, Form, Spin } from 'antd';
+import { InboxOutlined, SettingOutlined } from '@ant-design/icons';
+import { useDropzone } from 'react-dropzone';
+import Compressor from 'compressorjs';
+import { Octokit } from '@octokit/rest';
+import './Upload.css';
+
+const { Title, Paragraph } = Typography;
+const { Dragger } = Upload;
+
+const UploadPage = () => {
+  const [files, setFiles] = useState([]);
+  const [uploading, setUploading] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [compressImages, setCompressImages] = useState(true);
+  const [settings, setSettings] = useState(() => {
+    const savedSettings = localStorage.getItem('github-settings');
+    return savedSettings ? JSON.parse(savedSettings) : {
+      token: '',
+      owner: '',
+      repo: '',
+      branch: 'main',
+      path: 'images',
+      customDomain: ''
+    };
+  });
+
+  // 检查设置是否完成
+  const isSettingsComplete = () => {
+    return settings.token && settings.owner && settings.repo;
+  };
+
+  // 处理文件拖放
+  const onDrop = useCallback(acceptedFiles => {
+    const newFiles = acceptedFiles.map(file => ({
+      file,
+      name: file.name,
+      size: file.size,
+      preview: URL.createObjectURL(file),
+      status: 'ready', // ready, uploading, success, error
+      progress: 0,
+      url: ''
+    }));
+    
+    setFiles(prevFiles => [...prevFiles, ...newFiles]);
+  }, []);
+
+  const { getRootProps, getInputProps } = useDropzone({
+    onDrop,
+    accept: {
+      'image/*': []
+    }
+  });
+
+  // 压缩图片
+  const compressImage = (file) => {
+    return new Promise((resolve, reject) => {
+      if (!compressImages) {
+        resolve(file);
+        return;
+      }
+
+      new Compressor(file, {
+        quality: 0.8,
+        success(result) {
+          resolve(result);
+        },
+        error(err) {
+          console.error('压缩图片失败:', err);
+          reject(err);
+        },
+      });
+    });
+  };
+
+  // 上传单个文件到GitHub
+  const uploadToGitHub = async (fileObj, index) => {
+    try {
+      // 更新文件状态为上传中
+      setFiles(prevFiles => {
+        const newFiles = [...prevFiles];
+        newFiles[index] = { ...newFiles[index], status: 'uploading' };
+        return newFiles;
+      });
+
+      // 压缩图片
+      const compressedFile = await compressImage(fileObj.file);
+      
+      // 读取文件内容
+      const content = await readFileAsBase64(compressedFile);
+      
+      // 创建Octokit实例
+      const octokit = new Octokit({ auth: settings.token });
+      
+      // 生成文件路径
+      const date = new Date();
+      const timestamp = `${date.getFullYear()}${(date.getMonth() + 1).toString().padStart(2, '0')}${date.getDate().toString().padStart(2, '0')}${date.getHours().toString().padStart(2, '0')}${date.getMinutes().toString().padStart(2, '0')}${date.getSeconds().toString().padStart(2, '0')}`;
+      const fileName = `${timestamp}_${fileObj.name}`;
+      const filePath = `${settings.path}/${fileName}`;
+      
+      // 上传文件到GitHub
+      const response = await octokit.repos.createOrUpdateFileContents({
+        owner: settings.owner,
+        repo: settings.repo,
+        path: filePath,
+        message: `Upload image: ${fileName}`,
+        content: content,
+        branch: settings.branch
+      });
+      
+      // 生成图片URL
+      let imageUrl;
+      if (settings.customDomain) {
+        imageUrl = `${settings.customDomain}/${filePath}`;
+      } else {
+        imageUrl = `https://raw.githubusercontent.com/${settings.owner}/${settings.repo}/${settings.branch}/${filePath}`;
+      }
+      
+      // 更新文件状态为成功
+      setFiles(prevFiles => {
+        const newFiles = [...prevFiles];
+        newFiles[index] = { 
+          ...newFiles[index], 
+          status: 'success', 
+          progress: 100,
+          url: imageUrl
+        };
+        return newFiles;
+      });
+      
+      // 保存上传记录到本地存储
+      saveUploadHistory({
+        name: fileObj.name,
+        url: imageUrl,
+        size: fileObj.size,
+        date: new Date().toISOString(),
+        path: filePath
+      });
+      
+      return true;
+    } catch (error) {
+      console.error('上传失败:', error);
+      
+      // 更新文件状态为错误
+      setFiles(prevFiles => {
+        const newFiles = [...prevFiles];
+        newFiles[index] = { ...newFiles[index], status: 'error' };
+        return newFiles;
+      });
+      
+      message.error(`上传失败: ${fileObj.name}`);
+      return false;
+    }
+  };
+
+  // 读取文件为Base64
+  const readFileAsBase64 = (file) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => {
+        let encoded = reader.result.toString().replace(/^data:(.*,)?/, '');
+        resolve(encoded);
+      };
+      reader.onerror = error => reject(error);
+    });
+  };
+
+  // 保存上传历史
+  const saveUploadHistory = (record) => {
+    const history = JSON.parse(localStorage.getItem('upload-history') || '[]');
+    history.unshift(record);
+    localStorage.setItem('upload-history', JSON.stringify(history));
+  };
+
+  // 开始上传所有文件
+  const handleUpload = async () => {
+    if (!isSettingsComplete()) {
+      message.error('请先完成GitHub设置');
+      return;
+    }
+    
+    if (files.length === 0) {
+      message.warning('请先选择要上传的图片');
+      return;
+    }
+    
+    setUploading(true);
+    setProgress(0);
+    
+    let successCount = 0;
+    
+    for (let i = 0; i < files.length; i++) {
+      if (files[i].status !== 'success') {
+        const success = await uploadToGitHub(files[i], i);
+        if (success) successCount++;
+      } else {
+        successCount++;
+      }
+      
+      // 更新总进度
+      const newProgress = Math.floor(((i + 1) / files.length) * 100);
+      setProgress(newProgress);
+    }
+    
+    setUploading(false);
+    
+    if (successCount === files.length) {
+      message.success('所有图片上传成功！');
+    } else {
+      message.warning(`上传完成，${successCount}/${files.length} 个文件成功`);
+    }
+  };
+
+  // 移除文件
+  const handleRemove = (index) => {
+    setFiles(prevFiles => {
+      const newFiles = [...prevFiles];
+      // 释放预览URL
+      URL.revokeObjectURL(newFiles[index].preview);
+      newFiles.splice(index, 1);
+      return newFiles;
+    });
+  };
+
+  // 复制链接
+  const copyToClipboard = (text) => {
+    navigator.clipboard.writeText(text)
+      .then(() => message.success('链接已复制到剪贴板'))
+      .catch(err => message.error('复制失败: ' + err));
+  };
+
+  return (
+    <div className="upload-container">
+      <Typography className="upload-header">
+        <Title level={2}>上传图片</Title>
+        <Paragraph>
+          将图片上传到您的GitHub仓库，获取可用于博客的图片链接
+        </Paragraph>
+      </Typography>
+
+      {!isSettingsComplete() && (
+        <Card className="settings-reminder">
+          <SettingOutlined style={{ fontSize: '24px', marginRight: '8px' }} />
+          <div>
+            <p>您需要先完成GitHub设置才能上传图片</p>
+            <Button type="primary" href="/settings">前往设置</Button>
+          </div>
+        </Card>
+      )}
+
+      <Card title="上传选项" className="upload-options">
+        <Form layout="horizontal">
+          <Form.Item label="压缩图片">
+            <Switch 
+              checked={compressImages} 
+              onChange={setCompressImages} 
+              checkedChildren="开启" 
+              unCheckedChildren="关闭"
+            />
+            <span className="option-description">开启后将压缩图片以节省空间</span>
+          </Form.Item>
+        </Form>
+      </Card>
+
+      <div {...getRootProps({ className: 'dropzone' })}>
+        <input {...getInputProps()} />
+        <p><InboxOutlined style={{ fontSize: '48px' }} /></p>
+        <p className="main-text">点击或拖拽图片到此区域上传</p>
+        <p className="sub-text">支持单个或批量上传</p>
+      </div>
+
+      {files.length > 0 && (
+        <div className="file-list">
+          <div className="file-list-header">
+            <h3>待上传文件 ({files.length})</h3>
+            <Button 
+              type="primary" 
+              onClick={handleUpload} 
+              loading={uploading}
+              disabled={!isSettingsComplete()}
+            >
+              {uploading ? '上传中...' : '开始上传'}
+            </Button>
+          </div>
+          
+          {uploading && (
+            <div className="upload-progress">
+              <Progress percent={progress} status="active" />
+            </div>
+          )}
+          
+          <div className="file-items">
+            {files.map((file, index) => (
+              <div key={index} className={`file-item ${file.status}`}>
+                <div className="file-preview">
+                  <img src={file.preview} alt={file.name} />
+                  {file.status === 'uploading' && (
+                    <div className="file-loading">
+                      <Spin />
+                    </div>
+                  )}
+                </div>
+                <div className="file-info">
+                  <div className="file-name">{file.name}</div>
+                  <div className="file-size">{(file.size / 1024).toFixed(1)} KB</div>
+                  <div className="file-status">
+                    {file.status === 'ready' && '待上传'}
+                    {file.status === 'uploading' && '上传中...'}
+                    {file.status === 'success' && '上传成功'}
+                    {file.status === 'error' && '上传失败'}
+                  </div>
+                </div>
+                <div className="file-actions">
+                  {file.status === 'success' ? (
+                    <Button 
+                      type="link" 
+                      onClick={() => copyToClipboard(file.url)}
+                    >
+                      复制链接
+                    </Button>
+                  ) : (
+                    <Button 
+                      type="link" 
+                      danger 
+                      onClick={() => handleRemove(index)}
+                      disabled={uploading}
+                    >
+                      移除
+                    </Button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default UploadPage;

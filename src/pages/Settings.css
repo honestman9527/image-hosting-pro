@@ -1,0 +1,54 @@
+.settings-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.settings-header {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.settings-card {
+  margin-bottom: 24px;
+}
+
+.settings-card .ant-form-item-label {
+  font-weight: 500;
+}
+
+.settings-actions {
+  margin-top: 24px;
+  text-align: right;
+}
+
+.test-connection {
+  margin: 16px 0;
+}
+
+.test-result {
+  margin-top: 16px;
+}
+
+.about-card {
+  background-color: #f9f9f9;
+}
+
+.token-steps {
+  margin-top: 16px;
+  padding-left: 24px;
+}
+
+.token-steps li {
+  margin-bottom: 8px;
+}
+
+@media (max-width: 768px) {
+  .settings-card .ant-card-head {
+    padding: 0 16px;
+  }
+  
+  .settings-card .ant-card-body {
+    padding: 16px;
+  }
+}
