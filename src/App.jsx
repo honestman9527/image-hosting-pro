@@ -29,14 +29,9 @@ function App() {
       label: <Link to="/upload">上传图片</Link>,
     },
     {
-      key: '/gallery',
+      key: '/images',
       icon: <PictureOutlined />,
-      label: <Link to="/gallery">图片管理</Link>,
-    },
-    {
-      key: '/history',
-      icon: <HistoryOutlined />,
-      label: <Link to="/history">上传历史</Link>,
+      label: <Link to="/images">图片管理</Link>,
     },
     {
       key: '/settings',

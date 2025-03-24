@@ -2,8 +2,7 @@ import { createBrowserRouter } from 'react-router-dom';
 import App from './App';
 import Home from './pages/Home';
 import Upload from './pages/Upload';
-import Gallery from './pages/Gallery';
-import History from './pages/History';
+import ImageManager from './pages/ImageManager';
 import Settings from './pages/Settings';
 
 const router = createBrowserRouter([
@@ -20,12 +19,8 @@ const router = createBrowserRouter([
         element: <Upload />,
       },
       {
-        path: 'gallery',
-        element: <Gallery />,
-      },
-      {
-        path: 'history',
-        element: <History />,
+        path: 'images',
+        element: <ImageManager />,
       },
       {
         path: 'settings',
