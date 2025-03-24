@@ -22,15 +22,11 @@ const Home = () => {
           <p>支持图片压缩，节省存储空间</p>
         </Card>
 
-        <Card className="feature-card" title="图片管理" extra={<Link to="/gallery"><Button type="primary" icon={<PictureOutlined />}>浏览图片</Button></Link>}>
+        <Card className="feature-card" title="图片管理" extra={<Link to="/images"><Button type="primary" icon={<PictureOutlined />}>浏览图片</Button></Link>}>
           <p>查看已上传的所有图片</p>
           <p>复制图片链接，方便插入到博客中</p>
         </Card>
 
-        <Card className="feature-card" title="上传历史" extra={<Link to="/history"><Button type="primary" icon={<HistoryOutlined />}>查看历史</Button></Link>}>
-          <p>查看图片上传历史记录</p>
-          <p>管理已上传的图片资源</p>
-        </Card>
 
         <Card className="feature-card" title="设置" extra={<Link to="/settings"><Button type="primary" icon={<SettingOutlined />}>前往设置</Button></Link>}>
           <p>配置GitHub仓库信息</p>
