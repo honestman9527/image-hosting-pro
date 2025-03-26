@@ -55,6 +55,10 @@
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 20px;
   margin-bottom: 24px;
+  background-image: url('../assets/backgrounds/grid-bg.svg');
+  background-repeat: repeat;
+  padding: 30px;
+  border-radius: 4px;
 }
 
 .image-card {
