@@ -1,26 +1,35 @@
 body {
   margin: 0;
   padding: 0;
+  background: url('https://cdn.944986.xyz/zhizun62/images1/main/images/20250323_jJNNwkoz.webp') no-repeat center center fixed;
+  background-size: cover;
+  background-attachment: fixed;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 }
 
 #root {
   width: 100%;
-  height: 100vh;
+  min-height: 100vh;
+  background-color: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(5px);
 }
 
 .app-layout {
   min-height: 100vh;
+  background-color: transparent;
 }
 
 .app-header {
   display: flex;
   align-items: center;
   padding: 0 24px;
-  background-color: #fff;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  background-color: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
   position: sticky;
   top: 0;
   z-index: 1000;
+  transition: all 0.3s ease;
 }
 
 .logo-container {

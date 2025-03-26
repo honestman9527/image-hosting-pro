@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { Typography, Card, Image, Button, Input, Empty, message, Pagination, List, DatePicker, Dropdown, Space, Radio, Tabs } from 'antd';
+import React, { useState, useEffect, useCallback, useMemo, lazy, Suspense } from 'react';
+import { Typography, Card, Image as AntImage, Button, Input, Empty, message, Pagination, List, DatePicker, Dropdown, Space, Radio, Tabs, Spin } from 'antd';
+import LazyLoad from 'react-lazyload';
 import { CopyOutlined, DeleteOutlined, CalendarOutlined, DownOutlined, SearchOutlined } from '@ant-design/icons';
 import { Popconfirm } from 'antd';
 import './ImageManager.css';
@@ -57,7 +58,8 @@ const ImageManager = () => {
       bbcodeFormat: 'BBCode格式',
       gridView: '网格视图',
       timelineView: '时间线视图',
-      kb: 'KB'
+      kb: 'KB',
+      preview: '预览'
     },
     en: {
       title: 'Image Manager',
@@ -85,7 +87,8 @@ const ImageManager = () => {
       bbcodeFormat: 'BBCode Format',
       gridView: 'Grid View',
       timelineView: 'Timeline View',
-      kb: 'KB'
+      kb: 'KB',
+      preview: 'Preview'
     }
   };
   
@@ -94,11 +97,30 @@ const ImageManager = () => {
   
   const pageSize = 12;
 
-  // 从本地存储加载图片
+  // 从本地存储加载图片 - 优化性能
   useEffect(() => {
-    const history = JSON.parse(localStorage.getItem('upload-history') || '[]');
-    setImages(history);
-    setFilteredImages(history);
+    // 使用异步操作避免阻塞主线程
+    const loadImages = async () => {
+      try {
+        const historyString = localStorage.getItem('upload-history') || '[]';
+        const history = JSON.parse(historyString);
+        
+        // 按日期降序排序，最新的图片显示在前面
+        const sortedHistory = [...history].sort((a, b) => {
+          return new Date(b.date) - new Date(a.date);
+        });
+        
+        setImages(sortedHistory);
+        setFilteredImages(sortedHistory);
+      } catch (error) {
+        console.error('Error loading images:', error);
+        message.error('加载图片历史记录失败');
+        setImages([]);
+        setFilteredImages([]);
+      }
+    };
+    
+    loadImages();
   }, []);
 
   // 搜索图片
@@ -113,32 +135,39 @@ const ImageManager = () => {
     applyFilters(searchText, dates);
   };
 
-  // 应用所有筛选条件
-  const applyFilters = (text, dates) => {
-    let filtered = [...images];
-    
-    // 应用文本搜索
-    if (text) {
-      filtered = filtered.filter(img => 
-        img.name.toLowerCase().includes(text.toLowerCase())
-      );
-    }
-    
-    // 应用日期筛选
-    if (dates && dates.length === 2) {
-      const [startDate, endDate] = dates;
-      const start = startDate.startOf('day').valueOf();
-      const end = endDate.endOf('day').valueOf();
+  // 应用所有筛选条件 - 使用useCallback优化性能
+  const applyFilters = useCallback((text, dates) => {
+    // 使用requestAnimationFrame避免在同一帧内进行多次状态更新
+    requestAnimationFrame(() => {
+      let filtered = [...images];
       
-      filtered = filtered.filter(item => {
-        const itemDate = new Date(item.date).getTime();
-        return itemDate >= start && itemDate <= end;
-      });
-    }
-    
-    setFilteredImages(filtered);
-    setCurrentPage(1);
-  };
+      // 应用文本搜索 - 优化搜索性能
+      if (text) {
+        const searchTerms = text.toLowerCase().split(' ').filter(term => term.length > 0);
+        if (searchTerms.length > 0) {
+          filtered = filtered.filter(img => {
+            const imgName = img.name.toLowerCase();
+            return searchTerms.every(term => imgName.includes(term));
+          });
+        }
+      }
+      
+      // 应用日期筛选
+      if (dates && dates.length === 2) {
+        const [startDate, endDate] = dates;
+        const start = startDate.startOf('day').valueOf();
+        const end = endDate.endOf('day').valueOf();
+        
+        filtered = filtered.filter(item => {
+          const itemDate = new Date(item.date).getTime();
+          return itemDate >= start && itemDate <= end;
+        });
+      }
+      
+      setFilteredImages(filtered);
+      setCurrentPage(1);
+    });
+  }, [images]);
 
   // 清除所有筛选
   const clearFilters = () => {
@@ -200,14 +229,15 @@ const ImageManager = () => {
     setViewMode(e.target.value);
   };
 
-  // 计算当前页的图片
-  const currentImages = filteredImages.slice(
-    (currentPage - 1) * pageSize,
-    currentPage * pageSize
-  );
+  // 计算当前页的图片 - 使用useMemo优化性能
+  const currentImages = useMemo(() => {
+    const startIndex = (currentPage - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    return filteredImages.slice(startIndex, endIndex);
+  }, [filteredImages, currentPage, pageSize]);
 
-  // 按日期分组
-  const groupByDate = (items) => {
+  // 按日期分组 - 使用useMemo优化性能
+  const groupByDate = useCallback((items) => {
     const groups = {};
     
     items.forEach(item => {
@@ -222,9 +252,10 @@ const ImageManager = () => {
       date,
       items
     }));
-  };
-
-  const groupedImages = groupByDate(currentImages);
+  }, []);
+  
+  // 使用useMemo缓存分组结果
+  const groupedImages = useMemo(() => groupByDate(currentImages), [groupByDate, currentImages]);
 
   // 渲染网格视图
   const renderGridView = () => (
@@ -239,11 +270,17 @@ const ImageManager = () => {
               className="image-card"
               cover={
                 <div className="image-container">
-                  <Image
-                    src={image.url}
-                    alt={image.name}
-                    className="gallery-image"
-                  />
+                  <LazyLoad height={200} once placeholder={<div className="image-loading"><Spin /></div>}>
+                    <AntImage
+                      src={image.url}
+                      alt={image.name}
+                      className="gallery-image"
+                      loading="lazy"
+                      preview={{
+                        mask: <div className="image-preview-mask">{t.preview}</div>
+                      }}
+                    />
+                  </LazyLoad>
                 </div>
               }
               actions={[
@@ -346,11 +383,17 @@ const ImageManager = () => {
                   <Card className="history-card">
                     <div className="history-card-content">
                       <div className="history-image-container">
-                        <Image
-                          src={item.url}
-                          alt={item.name}
-                          className="history-image"
-                        />
+                        <LazyLoad height={120} once placeholder={<div className="image-loading"><Spin /></div>}>
+                          <AntImage
+                            src={item.url}
+                            alt={item.name}
+                            className="history-image"
+                            loading="lazy"
+                            preview={{
+                              mask: <div className="image-preview-mask">{t.preview}</div>
+                            }}
+                          />
+                        </LazyLoad>
                       </div>
                       <div className="history-item-info">
                         <h4>{item.name}</h4>
