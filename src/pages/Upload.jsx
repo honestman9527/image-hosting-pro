@@ -4,6 +4,7 @@ import { InboxOutlined, SettingOutlined } from '@ant-design/icons';
 import { useDropzone } from 'react-dropzone';
 import Compressor from 'compressorjs';
 import { Octokit } from '@octokit/rest';
+import { useSync } from '../contexts/SyncContext';
 import './Upload.css';
 
 const { Title, Paragraph } = Typography;
@@ -23,9 +24,13 @@ const UploadPage = () => {
       repo: '',
       branch: 'main',
       path: 'images',
-      customDomain: ''
+      customDomain: '',
+      enableSync: false
     };
   });
+  
+  // 获取同步上下文
+  const { isInitialized, syncHistory } = useSync();
 
   // 检查设置是否完成
   const isSettingsComplete = () => {
@@ -214,9 +219,17 @@ const UploadPage = () => {
 
   // 保存上传历史
   const saveUploadHistory = (record) => {
-    const history = JSON.parse(localStorage.getItem('upload-history') || '[]');
-    history.unshift(record);
-    localStorage.setItem('upload-history', JSON.stringify(history));
+    const historyString = localStorage.getItem('upload-history') || '[]';
+    const history = JSON.parse(historyString);
+    const newHistory = [record, ...history];
+    localStorage.setItem('upload-history', JSON.stringify(newHistory));
+    
+    // 如果启用了云同步，同步历史记录到Gist
+    if (settings.enableSync && isInitialized) {
+      syncHistory(newHistory).catch(error => {
+        console.error('同步历史记录失败:', error);
+      });
+    }
   };
 
   // 开始上传所有文件

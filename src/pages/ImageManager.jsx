@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback, useMemo, lazy, Suspense } from 'react';
 import { Typography, Card, Image as AntImage, Button, Input, Empty, message, Pagination, List, DatePicker, Dropdown, Space, Radio, Tabs, Spin } from 'antd';
 import LazyLoad from 'react-lazyload';
-import { CopyOutlined, DeleteOutlined, CalendarOutlined, DownOutlined, SearchOutlined } from '@ant-design/icons';
+import { CopyOutlined, DeleteOutlined, CalendarOutlined, DownOutlined, SearchOutlined, CloudSyncOutlined } from '@ant-design/icons';
 import { Popconfirm } from 'antd';
+import { useSync } from '../contexts/SyncContext';
 import './ImageManager.css';
 
 const { Title, Paragraph } = Typography;
@@ -26,9 +27,13 @@ const ImageManager = () => {
       branch: 'main',
       path: 'images',
       customDomain: '',
-      language: 'zh' // 默认语言为中文
+      language: 'zh', // 默认语言为中文
+      enableSync: false // 是否启用云同步
     };
   });
+  
+  // 获取同步上下文
+  const { isInitialized, isSyncing, syncHistory } = useSync();
   
   // 语言文本
   const texts = {
@@ -59,7 +64,12 @@ const ImageManager = () => {
       gridView: '网格视图',
       timelineView: '时间线视图',
       kb: 'KB',
-      preview: '预览'
+      preview: '预览',
+      syncFromCloud: '从云端同步',
+      syncingFromCloud: '正在从云端同步...',
+      syncSuccess: '同步成功',
+      syncFailed: '同步失败',
+      cloudSyncDisabled: '云同步未启用'
     },
     en: {
       title: 'Image Manager',
@@ -88,7 +98,12 @@ const ImageManager = () => {
       gridView: 'Grid View',
       timelineView: 'Timeline View',
       kb: 'KB',
-      preview: 'Preview'
+      preview: 'Preview',
+      syncFromCloud: 'Sync from Cloud',
+      syncingFromCloud: 'Syncing from cloud...',
+      syncSuccess: 'Sync successful',
+      syncFailed: 'Sync failed',
+      cloudSyncDisabled: 'Cloud sync disabled'
     }
   };
   
@@ -122,6 +137,41 @@ const ImageManager = () => {
     
     loadImages();
   }, []);
+
+  // 从云端同步历史记录
+  const handleSyncFromCloud = async () => {
+    if (!settings.enableSync || !isInitialized) {
+      message.warning(t.cloudSyncDisabled);
+      return;
+    }
+    
+    try {
+      // 获取本地历史记录
+      const historyString = localStorage.getItem('upload-history') || '[]';
+      const history = JSON.parse(historyString);
+      
+      // 同步历史记录
+      await syncHistory(history);
+      
+      // 重新加载历史记录
+      const updatedHistoryString = localStorage.getItem('upload-history') || '[]';
+      const updatedHistory = JSON.parse(updatedHistoryString);
+      
+      // 按日期降序排序
+      const sortedHistory = [...updatedHistory].sort((a, b) => {
+        return new Date(b.date) - new Date(a.date);
+      });
+      
+      setImages(sortedHistory);
+      setFilteredImages(sortedHistory);
+      applyFilters(searchText, dateRange);
+      
+      message.success(t.syncSuccess);
+    } catch (error) {
+      console.error('同步失败:', error);
+      message.error(`${t.syncFailed}: ${error.message}`);
+    }
+  };
 
   // 搜索图片
   const handleSearch = (value) => {
@@ -478,47 +528,52 @@ const ImageManager = () => {
 
   return (
     <div className="image-manager-container">
-      <Typography className="image-manager-header">
+      <div className="image-manager-header">
         <Title level={2}>{t.title}</Title>
-        <Paragraph>
-          {t.subtitle}
-        </Paragraph>
-      </Typography>
-
-      <div className="image-manager-actions">
+        <Paragraph>{t.subtitle}</Paragraph>
+      </div>
+      
+      <Card className="image-manager-controls">
         <div className="search-filter-container">
-          <Search
-            placeholder={t.search}
-            allowClear
-            enterButton={<SearchOutlined />}
-            size="large"
-            onSearch={handleSearch}
-            onChange={(e) => setSearchText(e.target.value)}
-            value={searchText}
-            className="search-input"
-          />
-          
-          <div className="date-filter">
-            <RangePicker 
-              onChange={handleDateRangeChange} 
-              value={dateRange}
-              placeholder={[t.startDate, t.endDate]}
+          <div className="search-container">
+            <Search
+              placeholder={t.search}
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+              onSearch={handleSearch}
+              style={{ width: '100%' }}
               allowClear
             />
           </div>
           
-          {(dateRange || searchText) && (
+          <div className="filter-container">
+            <RangePicker 
+              onChange={handleDateRangeChange} 
+              value={dateRange}
+              placeholder={[t.startDate, t.endDate]}
+            />
             <Button onClick={clearFilters}>{t.clearFilters}</Button>
-          )}
+            
+            {settings.enableSync && (
+              <Button 
+                type="primary"
+                icon={<CloudSyncOutlined />}
+                onClick={handleSyncFromCloud}
+                loading={isSyncing}
+              >
+                {isSyncing ? t.syncingFromCloud : t.syncFromCloud}
+              </Button>
+            )}
+          </div>
         </div>
         
-        <div className="view-mode-selector">
-          <Radio.Group value={viewMode} onChange={handleViewModeChange}>
+        <div className="view-mode-container">
+          <Radio.Group value={viewMode} onChange={handleViewModeChange} buttonStyle="solid">
             <Radio.Button value="grid">{t.gridView}</Radio.Button>
             <Radio.Button value="timeline">{t.timelineView}</Radio.Button>
           </Radio.Group>
         </div>
-      </div>
+      </Card>
 
       {filteredImages.length === 0 ? (
         <Empty

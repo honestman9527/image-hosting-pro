@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Typography, Form, Input, Button, Card, message, Alert, Switch, Radio } from 'antd';
-import { GithubOutlined, LinkOutlined, SaveOutlined, QuestionCircleOutlined, GlobalOutlined } from '@ant-design/icons';
+import { Typography, Form, Input, Button, Card, message, Alert, Switch, Radio, Spin, Divider, Badge } from 'antd';
+import { GithubOutlined, LinkOutlined, SaveOutlined, QuestionCircleOutlined, GlobalOutlined, CloudSyncOutlined, CloudUploadOutlined } from '@ant-design/icons';
 import { Octokit } from '@octokit/rest';
+import { useSync } from '../contexts/SyncContext';
 import './Settings.css';
 
 const { Title, Paragraph, Text } = Typography;
@@ -20,9 +21,21 @@ const Settings = () => {
       branch: 'main',
       path: 'images',
       customDomain: '',
-      language: 'zh' // 默认语言为中文
+      language: 'zh', // 默认语言为中文
+      enableSync: false // 是否启用云同步
     };
   });
+  
+  // 获取同步上下文
+  const { 
+    isInitialized, 
+    isSyncing, 
+    lastSynced, 
+    error: syncError, 
+    initializeSync, 
+    syncSettings, 
+    resyncAll 
+  } = useSync();
   
   // 语言文本
   const texts = {
@@ -32,7 +45,7 @@ const Settings = () => {
       githubSettings: 'GitHub设置',
       token: 'GitHub访问令牌',
       tokenRequired: '请输入GitHub访问令牌',
-      tokenExtra: '需要具有repo权限的个人访问令牌',
+      tokenExtra: '需要具有repo和gist权限的个人访问令牌（Personal Access Token）',
       tokenPlaceholder: '输入GitHub访问令牌',
       owner: '仓库所有者',
       ownerRequired: '请输入仓库所有者',
@@ -62,7 +75,7 @@ const Settings = () => {
       tokenStep1: '访问',
       tokenStep1Link: 'GitHub令牌设置页面',
       tokenStep2: '点击 "Generate new token" (生成新令牌)',
-      tokenStep3: '选择 "repo" 权限范围',
+      tokenStep3: '选择 "repo" 和 "gist" 权限范围（必须同时选择这两项权限）',
       tokenStep4: '生成并复制令牌',
       tokenStep5: '将令牌粘贴到上方的GitHub访问令牌输入框中',
       languageSettings: '语言设置',
@@ -72,7 +85,21 @@ const Settings = () => {
       branchNotExist: '分支 "{branch}" 不存在，请创建此分支或使用现有分支',
       connectionFailed: '连接失败: {error}',
       saveSuccess: '设置已保存',
-      saveFailed: '保存设置失败'
+      saveFailed: '保存设置失败',
+      syncSettings: '云同步设置',
+      enableSync: '启用云同步',
+      enableSyncExtra: '启用后，您的设置和上传历史将保存在GitHub Gist中，可在多设备间同步',
+      syncNow: '立即同步',
+      syncStatus: '同步状态',
+      syncInitialized: '已初始化',
+      syncNotInitialized: '未初始化',
+      lastSynced: '上次同步时间',
+      syncError: '同步错误',
+      syncInProgress: '正在同步...',
+      syncSuccess: '同步成功',
+      syncRequired: '需要同步',
+      syncPermissions: '需要gist权限',
+      syncPermissionsExtra: '确保您的GitHub令牌具有gist权限，以便使用云同步功能。如果遇到"Not Found"错误，请检查您的令牌是否有gist权限。'
     },
     en: {
       title: 'Settings',
@@ -80,7 +107,7 @@ const Settings = () => {
       githubSettings: 'GitHub Settings',
       token: 'GitHub Access Token',
       tokenRequired: 'Please enter GitHub access token',
-      tokenExtra: 'Personal access token with repo permission',
+      tokenExtra: 'Personal access token with repo and gist permissions (both are required)',
       tokenPlaceholder: 'Enter GitHub access token',
       owner: 'Repository Owner',
       ownerRequired: 'Please enter repository owner',
@@ -110,7 +137,7 @@ const Settings = () => {
       tokenStep1: 'Visit',
       tokenStep1Link: 'GitHub token settings page',
       tokenStep2: 'Click "Generate new token"',
-      tokenStep3: 'Select "repo" permission scope',
+      tokenStep3: 'Select "repo" AND "gist" permission scopes (both are required)',
       tokenStep4: 'Generate and copy the token',
       tokenStep5: 'Paste the token into the GitHub access token input box above',
       languageSettings: 'Language Settings',
@@ -120,7 +147,21 @@ const Settings = () => {
       branchNotExist: 'Branch "{branch}" does not exist, please create this branch or use an existing branch',
       connectionFailed: 'Connection failed: {error}',
       saveSuccess: 'Settings saved',
-      saveFailed: 'Failed to save settings'
+      saveFailed: 'Failed to save settings',
+      syncSettings: 'Cloud Sync Settings',
+      enableSync: 'Enable Cloud Sync',
+      enableSyncExtra: 'When enabled, your settings and upload history will be saved in GitHub Gist for multi-device sync',
+      syncNow: 'Sync Now',
+      syncStatus: 'Sync Status',
+      syncInitialized: 'Initialized',
+      syncNotInitialized: 'Not Initialized',
+      lastSynced: 'Last Synced',
+      syncError: 'Sync Error',
+      syncInProgress: 'Syncing...',
+      syncSuccess: 'Sync Successful',
+      syncRequired: 'Sync Required',
+      syncPermissions: 'Gist Permission Required',
+      syncPermissionsExtra: 'Ensure your GitHub token has gist permission to use cloud sync feature. If you encounter a "Not Found" error, check if your token has gist permission.'
     }
   };
   
@@ -140,6 +181,17 @@ const Settings = () => {
       localStorage.setItem('github-settings', JSON.stringify(values));
       setSettings(values);
       message.success(t.saveSuccess);
+      
+      // 如果启用了云同步，同步设置到Gist
+      if (values.enableSync && values.token) {
+        if (!isInitialized) {
+          // 初始化同步
+          await initializeSync(values.token);
+        } else {
+          // 同步设置
+          await syncSettings(values);
+        }
+      }
     } catch (error) {
       console.error('保存设置失败:', error);
       message.error(t.saveFailed);
@@ -154,6 +206,31 @@ const Settings = () => {
     const newSettings = { ...settings, language: newLanguage };
     localStorage.setItem('github-settings', JSON.stringify(newSettings));
     setSettings(newSettings);
+  };
+  
+  // 切换云同步
+  const handleSyncChange = (checked) => {
+    const newSettings = { ...settings, enableSync: checked };
+    form.setFieldsValue(newSettings);
+    
+    if (checked && settings.token && !isInitialized) {
+      // 如果启用同步且有token，但未初始化，则初始化同步
+      initializeSync(settings.token);
+    }
+  };
+  
+  // 手动触发同步
+  const handleManualSync = async () => {
+    if (!settings.token) {
+      message.error(t.errorMessage);
+      return;
+    }
+    
+    if (!isInitialized) {
+      await initializeSync(settings.token);
+    } else {
+      await resyncAll();
+    }
   };
 
   // 测试GitHub连接
@@ -198,75 +275,54 @@ const Settings = () => {
       // 使用TextEncoder替代Buffer进行编码
       const encoder = new TextEncoder();
       const testContent = `测试连接 - ${new Date().toISOString()}`;
-      const content = btoa(String.fromCharCode.apply(null, encoder.encode(testContent)));
+      const contentBytes = encoder.encode(testContent);
+      const contentBase64 = btoa(String.fromCharCode(...contentBytes));
       
       await octokit.repos.createOrUpdateFileContents({
         owner: values.owner,
         repo: values.repo,
         path: testPath,
-        message: '测试连接',
-        content: content,
+        message: 'Test connection',
+        content: contentBase64,
         branch: values.branch
       });
       
-      // 删除测试文件
-      const { data: fileData } = await octokit.repos.getContent({
-        owner: values.owner,
-        repo: values.repo,
-        path: testPath,
-        ref: values.branch
-      });
-      
-      await octokit.repos.deleteFile({
-        owner: values.owner,
-        repo: values.repo,
-        path: testPath,
-        message: '删除测试文件',
-        sha: fileData.sha,
-        branch: values.branch
-      });
-      
+      // 连接成功
       setTestResult({
         success: true,
         message: t.connectionSuccess
       });
-      
     } catch (error) {
       console.error('测试连接失败:', error);
       setTestResult({
         success: false,
-        message: t.connectionFailed.replace('{error}', error.message || '未知错误')
+        message: t.connectionFailed.replace('{error}', error.message)
       });
     } finally {
       setTestLoading(false);
     }
   };
 
+  // 格式化日期时间
+  const formatDateTime = (date) => {
+    if (!date) return '-';
+    return new Date(date).toLocaleString();
+  };
+
   return (
     <div className="settings-container">
-      <Typography className="settings-header">
+      <div className="settings-header">
         <Title level={2}>{t.title}</Title>
-        <Paragraph>
-          {t.subtitle}
-        </Paragraph>
-      </Typography>
+        <Paragraph>{t.subtitle}</Paragraph>
+      </div>
       
-      <Card title={t.languageSettings} className="settings-card" extra={<GlobalOutlined />}>
-        <div className="language-selector">
-          <Radio.Group value={settings.language || 'zh'} onChange={handleLanguageChange}>
-            <Radio.Button value="zh">中文</Radio.Button>
-            <Radio.Button value="en">English</Radio.Button>
-          </Radio.Group>
-        </div>
-      </Card>
-
       <Form
         form={form}
         layout="vertical"
         onFinish={handleSave}
         initialValues={settings}
       >
-        <Card title={t.githubSettings} className="settings-card" extra={<GithubOutlined />}>
+        <Card title={<><GithubOutlined /> {t.githubSettings}</>} className="settings-card">
           <Form.Item
             name="token"
             label={t.token}
@@ -275,7 +331,7 @@ const Settings = () => {
           >
             <Input.Password placeholder={t.tokenPlaceholder} />
           </Form.Item>
-
+          
           <Form.Item
             name="owner"
             label={t.owner}
@@ -284,7 +340,7 @@ const Settings = () => {
           >
             <Input placeholder={t.ownerPlaceholder} />
           </Form.Item>
-
+          
           <Form.Item
             name="repo"
             label={t.repo}
@@ -293,7 +349,7 @@ const Settings = () => {
           >
             <Input placeholder={t.repoPlaceholder} />
           </Form.Item>
-
+          
           <Form.Item
             name="branch"
             label={t.branch}
@@ -302,7 +358,7 @@ const Settings = () => {
           >
             <Input placeholder={t.branchPlaceholder} />
           </Form.Item>
-
+          
           <Form.Item
             name="path"
             label={t.path}
@@ -311,29 +367,83 @@ const Settings = () => {
           >
             <Input placeholder={t.pathPlaceholder} />
           </Form.Item>
-
-          <div className="test-connection">
-            <Button 
-              type="default" 
-              onClick={testConnection} 
-              loading={testLoading}
-              icon={<QuestionCircleOutlined />}
-            >
-              {t.testConnection}
-            </Button>
-            
-            {testResult && (
-              <Alert
-                className="test-result"
-                message={testResult.message}
-                type={testResult.success ? 'success' : 'error'}
-                showIcon
+          
+          <Button 
+            type="default" 
+            onClick={testConnection} 
+            loading={testLoading}
+          >
+            {t.testConnection}
+          </Button>
+          
+          {testResult && (
+            <Alert
+              className="settings-alert"
+              message={testResult.message}
+              type={testResult.success ? 'success' : 'error'}
+              showIcon
+            />
+          )}
+        </Card>
+        
+        <Card title={<><CloudSyncOutlined /> {t.syncSettings}</>} className="settings-card">
+          <Form.Item
+            name="enableSync"
+            valuePropName="checked"
+            extra={t.enableSyncExtra}
+          >
+            <Switch 
+              checkedChildren={t.enableSync} 
+              unCheckedChildren={t.enableSync}
+              onChange={handleSyncChange}
+            />
+          </Form.Item>
+          
+          <Alert
+            className="settings-alert"
+            message={t.syncPermissions}
+            description={t.syncPermissionsExtra}
+            type="info"
+            showIcon
+          />
+          
+          <Divider />
+          
+          <div className="sync-status">
+            <div className="sync-status-item">
+              <Text strong>{t.syncStatus}:</Text>
+              <Badge 
+                status={isInitialized ? 'success' : 'default'} 
+                text={isInitialized ? t.syncInitialized : t.syncNotInitialized} 
               />
+            </div>
+            
+            <div className="sync-status-item">
+              <Text strong>{t.lastSynced}:</Text>
+              <Text>{lastSynced ? formatDateTime(lastSynced) : '-'}</Text>
+            </div>
+            
+            {syncError && (
+              <div className="sync-status-item">
+                <Text strong>{t.syncError}:</Text>
+                <Text type="danger">{syncError}</Text>
+              </div>
             )}
           </div>
+          
+          <Button 
+            type="primary" 
+            icon={<CloudUploadOutlined />}
+            onClick={handleManualSync}
+            loading={isSyncing}
+            disabled={!settings.token || !settings.enableSync}
+            className="sync-button"
+          >
+            {isSyncing ? t.syncInProgress : t.syncNow}
+          </Button>
         </Card>
-
-        <Card title={t.cdnSettings} className="settings-card" extra={<LinkOutlined />}>
+        
+        <Card title={<><LinkOutlined /> {t.cdnSettings}</>} className="settings-card">
           <Form.Item
             name="customDomain"
             label={t.customDomain}
@@ -341,35 +451,46 @@ const Settings = () => {
           >
             <Input placeholder={t.customDomainPlaceholder} />
           </Form.Item>
-
-          <Form.Item className="settings-actions">
-            <Button 
-              type="primary" 
-              htmlType="submit" 
-              loading={loading}
-              icon={<SaveOutlined />}
-            >
-              {t.saveSettings}
-            </Button>
+        </Card>
+        
+        <Card title={<><GlobalOutlined /> {t.languageSettings}</>} className="settings-card">
+          <Form.Item
+            name="language"
+            label={t.languageLabel}
+          >
+            <Radio.Group onChange={handleLanguageChange}>
+              <Radio value="zh">中文</Radio>
+              <Radio value="en">English</Radio>
+            </Radio.Group>
           </Form.Item>
         </Card>
+        
+        <Card title={<><QuestionCircleOutlined /> {t.about}</>} className="settings-card">
+          <Paragraph>{t.aboutContent}</Paragraph>
+          
+          <Paragraph>
+            <strong>{t.howToGetToken}</strong>
+            <ol>
+              <li>{t.tokenStep1} <a href="https://github.com/settings/tokens" target="_blank" rel="noopener noreferrer">{t.tokenStep1Link}</a></li>
+              <li>{t.tokenStep2}</li>
+              <li>{t.tokenStep3}</li>
+              <li>{t.tokenStep4}</li>
+              <li>{t.tokenStep5}</li>
+            </ol>
+          </Paragraph>
+        </Card>
+        
+        <div className="settings-actions">
+          <Button 
+            type="primary" 
+            htmlType="submit" 
+            icon={<SaveOutlined />} 
+            loading={loading}
+          >
+            {t.saveSettings}
+          </Button>
+        </div>
       </Form>
-
-      <Card title={t.about} className="settings-card about-card">
-        <Paragraph>
-          {t.aboutContent}
-        </Paragraph>
-        <Paragraph>
-          <Text strong>{t.howToGetToken}</Text>
-        </Paragraph>
-        <ol className="token-steps">
-          <li>{t.tokenStep1} <a href="https://github.com/settings/tokens" target="_blank" rel="noopener noreferrer">{t.tokenStep1Link}</a></li>
-          <li>{t.tokenStep2}</li>
-          <li>{t.tokenStep3}</li>
-          <li>{t.tokenStep4}</li>
-          <li>{t.tokenStep5}</li>
-        </ol>
-      </Card>
     </div>
   );
 };
