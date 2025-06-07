@@ -12,10 +12,11 @@ const Settings = () => {
   const [loading, setLoading] = useState(false);
   const [testLoading, setTestLoading] = useState(false);
   const [testResult, setTestResult] = useState(null);
+  // 单独保存token，不存储在localStorage
+  const [token, setToken] = useState('');
   const [settings, setSettings] = useState(() => {
     const savedSettings = localStorage.getItem('github-settings');
     return savedSettings ? JSON.parse(savedSettings) : {
-      token: '',
       owner: '',
       repo: '',
       branch: 'main',
@@ -183,14 +184,11 @@ const Settings = () => {
         
         if (cfToken) {
           console.log('从Cloudflare Pages环境变量获取到token');
-          // 更新设置和表单
-          const newSettings = { ...settings, token: cfToken };
-          localStorage.setItem('github-settings', JSON.stringify(newSettings));
-          setSettings(newSettings);
-          form.setFieldsValue(newSettings);
+          // 仅在内存中保存token，不存储到localStorage
+          setToken(cfToken);
           
           // 如果启用了同步，尝试初始化
-          if (newSettings.enableSync && !isInitialized) {
+          if (settings.enableSync && !isInitialized) {
             initializeSync(cfToken);
           }
         }
@@ -199,29 +197,32 @@ const Settings = () => {
       }
     }
     
-    // 仅在首次加载且本地无token时执行
-    if (!settings.token) {
-      getCloudflareEnvToken();
-    }
+    getCloudflareEnvToken();
   }, []); // 仅在组件挂载时执行一次
 
   // 保存设置
   const handleSave = async (values) => {
     setLoading(true);
     try {
-      // 保存到本地存储
-      localStorage.setItem('github-settings', JSON.stringify(values));
-      setSettings(values);
+      // 获取当前内存中的token或环境变量
+      const currentToken = token || import.meta.env.VITE_GITHUB_TOKEN || '';
+      
+      // 只保存非敏感信息到localStorage
+      const settingsToSave = { ...values };
+      delete settingsToSave.token; // 确保不保存token到localStorage
+      
+      localStorage.setItem('github-settings', JSON.stringify(settingsToSave));
+      setSettings(settingsToSave);
       message.success(t.saveSuccess);
       
       // 如果启用了云同步，同步设置到Gist
-      if (values.enableSync && values.token) {
+      if (values.enableSync && currentToken) {
         if (!isInitialized) {
           // 初始化同步
-          await initializeSync(values.token);
+          await initializeSync(currentToken);
         } else {
-          // 同步设置
-          await syncSettings(values);
+          // 同步设置，传递currentToken而非form中的token
+          await syncSettings({ ...settingsToSave, token: currentToken });
         }
       }
     } catch (error) {
@@ -253,22 +254,48 @@ const Settings = () => {
   
   // 手动触发同步
   const handleManualSync = async () => {
-    if (!settings.token) {
-      message.error(t.errorMessage);
+    // 使用内存中的token或环境变量
+    const currentToken = token || import.meta.env.VITE_GITHUB_TOKEN;
+    
+    if (!currentToken) {
+      message.error(t.tokenRequired);
       return;
     }
     
-    if (!isInitialized) {
-      await initializeSync(settings.token);
-    } else {
-      await resyncAll();
+    // 禁用同步按钮
+    setLoading(true);
+    
+    try {
+      console.log('手动触发同步...');
+      
+      let success;
+      if (!isInitialized) {
+        console.log('未初始化，调用initializeSync...');
+        success = await initializeSync(currentToken);
+      } else {
+        console.log('已初始化，调用resyncAll...');
+        success = await resyncAll();
+      }
+      
+      if (success) {
+        message.success(t.syncSuccess);
+      }
+    } catch (error) {
+      console.error('手动同步过程中发生错误:', error);
+      message.error(`${t.syncFailed}: ${error.message}`);
+    } finally {
+      setLoading(false);
     }
   };
 
   // 测试GitHub连接
   const testConnection = async () => {
     const values = form.getFieldsValue();
-    if (!values.token) {
+    
+    // 使用内存中的token或环境变量
+    const currentToken = token || import.meta.env.VITE_GITHUB_TOKEN;
+    
+    if (!currentToken) {
       message.error(t.tokenRequired);
       return;
     }
@@ -280,7 +307,7 @@ const Settings = () => {
     setTestResult(null);
 
     try {
-      const octokit = new Octokit({ auth: values.token });
+      const octokit = new Octokit({ auth: currentToken });
       
       // 测试令牌是否有效
       const { data: user } = await octokit.users.getAuthenticated();
@@ -371,14 +398,26 @@ const Settings = () => {
         initialValues={settings}
       >
         <Card title={<><GithubOutlined /> {t.githubSettings}</>} className="settings-card">
-          <Form.Item
-            name="token"
-            label={t.token}
-            rules={[{ required: true, message: t.tokenRequired }]}
-            extra={t.tokenExtra}
-          >
-            <Input.Password placeholder={t.tokenPlaceholder} />
-          </Form.Item>
+          {/* 移除token输入框，使用环境变量中的token */}
+          {!import.meta.env.VITE_GITHUB_TOKEN && (
+            <Alert
+              message="GitHub令牌未配置"
+              description="请联系管理员在Cloudflare Pages中配置VITE_GITHUB_TOKEN环境变量。"
+              type="warning"
+              showIcon
+              style={{ marginBottom: 16 }}
+            />
+          )}
+          
+          {import.meta.env.VITE_GITHUB_TOKEN && (
+            <Alert
+              message="GitHub令牌已配置"
+              description="令牌已从环境变量中加载，无需手动输入。"
+              type="success"
+              showIcon
+              style={{ marginBottom: 16 }}
+            />
+          )}
           
           <Form.Item
             name="owner"
