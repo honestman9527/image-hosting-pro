@@ -189,7 +189,15 @@ const Settings = () => {
           
           // 如果启用了同步，尝试初始化
           if (settings.enableSync && !isInitialized) {
-            initializeSync(cfToken);
+            console.log('检测到同步已启用但未初始化，自动初始化同步');
+            initializeSync(cfToken).then(success => {
+              if (success) {
+                console.log('自动初始化同步成功');
+                message.success('云同步已自动连接');
+              } else {
+                console.error('自动初始化同步失败');
+              }
+            });
           }
         }
       } catch (error) {
@@ -198,7 +206,18 @@ const Settings = () => {
     }
     
     getCloudflareEnvToken();
-  }, []); // 仅在组件挂载时执行一次
+  }, [settings.enableSync, isInitialized]); // 依赖项添加enableSync和isInitialized，以便状态变更时重新执行
+
+  // 监听同步状态变化
+  useEffect(() => {
+    // 检查设置中的同步状态和当前实际同步状态是否一致
+    if (settings.enableSync && !isInitialized && token) {
+      console.log('同步状态不一致，尝试重新初始化');
+      initializeSync(token).catch(err => {
+        console.error('初始化同步失败:', err);
+      });
+    }
+  }, [settings.enableSync, isInitialized, token]);
 
   // 保存设置
   const handleSave = async (values) => {
@@ -246,9 +265,21 @@ const Settings = () => {
     const newSettings = { ...settings, enableSync: checked };
     form.setFieldsValue(newSettings);
     
-    if (checked && settings.token && !isInitialized) {
+    // 保存到localStorage
+    localStorage.setItem('github-settings', JSON.stringify(newSettings));
+    setSettings(newSettings);
+    
+    // 获取当前token
+    const currentToken = token || import.meta.env.VITE_GITHUB_TOKEN;
+    
+    if (checked && currentToken && !isInitialized) {
       // 如果启用同步且有token，但未初始化，则初始化同步
-      initializeSync(settings.token);
+      console.log('启用同步并立即初始化');
+      initializeSync(currentToken).then(success => {
+        if (!success) {
+          message.error('同步初始化失败，请检查令牌权限');
+        }
+      });
     }
   };
   
