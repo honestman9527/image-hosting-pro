@@ -47,14 +47,14 @@ const Settings = () => {
       tokenRequired: '请输入GitHub访问令牌',
       tokenExtra: '需要具有repo和gist权限的个人访问令牌（Personal Access Token）',
       tokenPlaceholder: '输入GitHub访问令牌',
-      owner: '仓库所有者',
+      owner: '仓库所有者 (可选)',
       ownerRequired: '请输入仓库所有者',
-      ownerExtra: '您的GitHub用户名或组织名称',
-      ownerPlaceholder: '输入仓库所有者',
-      repo: '仓库名称',
+      ownerExtra: '您的GitHub用户名或组织名称，如果仅用于同步设置，可以留空',
+      ownerPlaceholder: '输入仓库所有者 (可选)',
+      repo: '仓库名称 (可选)',
       repoRequired: '请输入仓库名称',
-      repoExtra: '用于存储图片的GitHub仓库名称',
-      repoPlaceholder: '输入仓库名称',
+      repoExtra: '用于存储图片的GitHub仓库名称，如果仅用于同步设置，可以留空',
+      repoPlaceholder: '输入仓库名称 (可选)',
       branch: '分支名称',
       branchRequired: '请输入分支名称',
       branchExtra: '存储图片的分支，通常为main或master',
@@ -109,14 +109,14 @@ const Settings = () => {
       tokenRequired: 'Please enter GitHub access token',
       tokenExtra: 'Personal access token with repo and gist permissions (both are required)',
       tokenPlaceholder: 'Enter GitHub access token',
-      owner: 'Repository Owner',
+      owner: 'Repository Owner (Optional)',
       ownerRequired: 'Please enter repository owner',
-      ownerExtra: 'Your GitHub username or organization name',
-      ownerPlaceholder: 'Enter repository owner',
-      repo: 'Repository Name',
+      ownerExtra: 'Your GitHub username or organization name, can be empty if only used for sync',
+      ownerPlaceholder: 'Enter repository owner (optional)',
+      repo: 'Repository Name (Optional)',
       repoRequired: 'Please enter repository name',
-      repoExtra: 'GitHub repository name for storing images',
-      repoPlaceholder: 'Enter repository name',
+      repoExtra: 'GitHub repository name for storing images, can be empty if only used for sync',
+      repoPlaceholder: 'Enter repository name (optional)',
       branch: 'Branch Name',
       branchRequired: 'Please enter branch name',
       branchExtra: 'Branch for storing images, usually main or master',
@@ -236,10 +236,13 @@ const Settings = () => {
   // 测试GitHub连接
   const testConnection = async () => {
     const values = form.getFieldsValue();
-    if (!values.token || !values.owner || !values.repo) {
-      message.error(t.errorMessage);
+    if (!values.token) {
+      message.error(t.tokenRequired);
       return;
     }
+
+    // 如果没有提供仓库和用户名，则只测试令牌是否有效
+    const isTokenOnlyTest = !values.owner || !values.repo;
 
     setTestLoading(true);
     setTestResult(null);
@@ -247,7 +250,20 @@ const Settings = () => {
     try {
       const octokit = new Octokit({ auth: values.token });
       
-      // 测试仓库访问
+      // 测试令牌是否有效
+      const { data: user } = await octokit.users.getAuthenticated();
+      
+      if (isTokenOnlyTest) {
+        // 只测试令牌，如果能获取用户信息，则成功
+        setTestResult({
+          success: true,
+          message: `令牌有效，已验证为用户: ${user.login}`
+        });
+        setTestLoading(false);
+        return;
+      }
+      
+      // 如果提供了仓库信息，则继续测试仓库访问
       const { data: repo } = await octokit.repos.get({
         owner: values.owner,
         repo: values.repo
@@ -335,7 +351,7 @@ const Settings = () => {
           <Form.Item
             name="owner"
             label={t.owner}
-            rules={[{ required: true, message: t.ownerRequired }]}
+            rules={[{ required: false, message: t.ownerRequired }]}
             extra={t.ownerExtra}
           >
             <Input placeholder={t.ownerPlaceholder} />
@@ -344,7 +360,7 @@ const Settings = () => {
           <Form.Item
             name="repo"
             label={t.repo}
-            rules={[{ required: true, message: t.repoRequired }]}
+            rules={[{ required: false, message: t.repoRequired }]}
             extra={t.repoExtra}
           >
             <Input placeholder={t.repoPlaceholder} />

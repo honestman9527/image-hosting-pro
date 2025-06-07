@@ -24,13 +24,17 @@ export async function createConfigGist(octokit, settings, history = []) {
       throw new Error(`GitHub认证失败: ${authError.message}. 请检查您的令牌是否有效。`);
     }
     
+    // 确保不包含令牌信息
+    const settingsToSave = { ...settings };
+    delete settingsToSave.token;
+    
     // 创建Gist
     const response = await octokit.gists.create({
       description: GIST_DESCRIPTION,
       public: false,
       files: {
         [CONFIG_FILENAME]: {
-          content: JSON.stringify(settings, null, 2)
+          content: JSON.stringify(settingsToSave, null, 2)
         },
         [HISTORY_FILENAME]: {
           content: JSON.stringify(history, null, 2)
@@ -84,11 +88,16 @@ export async function findConfigGist(octokit) {
  */
 export async function saveSettingsToGist(octokit, gistId, settings) {
   try {
+    // 创建设置的副本，移除敏感信息
+    const settingsToSave = { ...settings };
+    // 移除令牌信息，保留其他设置
+    delete settingsToSave.token;
+    
     await octokit.gists.update({
       gist_id: gistId,
       files: {
         [CONFIG_FILENAME]: {
-          content: JSON.stringify(settings, null, 2)
+          content: JSON.stringify(settingsToSave, null, 2)
         }
       }
     });
@@ -185,8 +194,12 @@ export async function initGistSync(token) {
     const localSettings = JSON.parse(localStorage.getItem('github-settings') || '{}');
     const localHistory = JSON.parse(localStorage.getItem('upload-history') || '[]');
     
+    // 移除令牌信息再保存到Gist
+    const settingsToSave = { ...localSettings };
+    delete settingsToSave.token;
+    
     // 创建新的Gist
-    gistId = await createConfigGist(octokit, localSettings, localHistory);
+    gistId = await createConfigGist(octokit, settingsToSave, localHistory);
   }
   
   return { octokit, gistId };

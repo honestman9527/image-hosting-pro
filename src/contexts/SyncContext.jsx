@@ -32,7 +32,14 @@ export const SyncProvider = ({ children }) => {
       // 从Gist加载设置
       const gistSettings = await loadSettingsFromGist(octokit, gistId);
       if (gistSettings) {
-        localStorage.setItem('github-settings', JSON.stringify(gistSettings));
+        // 合并设置，保留本地令牌但使用云端的其他设置
+        const currentSettings = JSON.parse(localStorage.getItem('github-settings') || '{}');
+        const mergedSettings = {
+          ...gistSettings,
+          token: token // 使用当前输入的token
+        };
+        
+        localStorage.setItem('github-settings', JSON.stringify(mergedSettings));
       }
       
       // 从Gist加载历史
@@ -88,7 +95,11 @@ export const SyncProvider = ({ children }) => {
     setSyncState(prev => ({ ...prev, isSyncing: true }));
     
     try {
-      await saveSettingsToGist(octokit, gistId, settings);
+      // 确保移除令牌信息再同步
+      const settingsToSync = { ...settings };
+      delete settingsToSync.token;
+      
+      await saveSettingsToGist(octokit, gistId, settingsToSync);
       
       setSyncState(prev => ({
         ...prev,
@@ -156,8 +167,12 @@ export const SyncProvider = ({ children }) => {
       const localSettings = JSON.parse(localStorage.getItem('github-settings') || '{}');
       const localHistory = JSON.parse(localStorage.getItem('upload-history') || '[]');
       
+      // 确保移除令牌信息再同步
+      const settingsToSync = { ...localSettings };
+      delete settingsToSync.token;
+      
       // 保存到Gist
-      await saveSettingsToGist(octokit, gistId, localSettings);
+      await saveSettingsToGist(octokit, gistId, settingsToSync);
       await saveHistoryToGist(octokit, gistId, localHistory);
       
       // 更新同步状态
