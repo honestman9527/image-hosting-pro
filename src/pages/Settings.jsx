@@ -173,6 +173,38 @@ const Settings = () => {
     form.setFieldsValue(settings);
   }, [form, settings]);
 
+  // 从Cloudflare Pages环境变量获取token
+  useEffect(() => {
+    async function getCloudflareEnvToken() {
+      try {
+        // 尝试从环境变量中获取token
+        // Cloudflare Pages会将环境变量暴露给客户端，格式为：VITE_GITHUB_TOKEN
+        const cfToken = import.meta.env.VITE_GITHUB_TOKEN;
+        
+        if (cfToken) {
+          console.log('从Cloudflare Pages环境变量获取到token');
+          // 更新设置和表单
+          const newSettings = { ...settings, token: cfToken };
+          localStorage.setItem('github-settings', JSON.stringify(newSettings));
+          setSettings(newSettings);
+          form.setFieldsValue(newSettings);
+          
+          // 如果启用了同步，尝试初始化
+          if (newSettings.enableSync && !isInitialized) {
+            initializeSync(cfToken);
+          }
+        }
+      } catch (error) {
+        console.error('从环境变量获取token失败:', error);
+      }
+    }
+    
+    // 仅在首次加载且本地无token时执行
+    if (!settings.token) {
+      getCloudflareEnvToken();
+    }
+  }, []); // 仅在组件挂载时执行一次
+
   // 保存设置
   const handleSave = async (values) => {
     setLoading(true);
