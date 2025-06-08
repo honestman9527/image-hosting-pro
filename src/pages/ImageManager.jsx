@@ -59,6 +59,7 @@ const ImageManager = () => {
       clearFilters: '清除筛选',
       originalLink: '原始链接',
       markdownFormat: 'Markdown格式',
+      markdownWithLinkFormat: 'Markdown带链接格式',
       htmlFormat: 'HTML格式',
       bbcodeFormat: 'BBCode格式',
       gridView: '网格视图',
@@ -93,6 +94,7 @@ const ImageManager = () => {
       clearFilters: 'Clear Filters',
       originalLink: 'Original Link',
       markdownFormat: 'Markdown Format',
+      markdownWithLinkFormat: 'Markdown with Link Format',
       htmlFormat: 'HTML Format',
       bbcodeFormat: 'BBCode Format',
       gridView: 'Grid View',
@@ -242,6 +244,9 @@ const ImageManager = () => {
     // Markdown格式
     const markdownUrl = `![${item.name}](${originalUrl})`;
     
+    // Markdown带链接格式（图片点击跳转到图片链接）
+    const markdownWithLinkUrl = `[![${item.name}](${originalUrl})](${originalUrl})`;
+    
     // HTML格式
     const htmlUrl = `<img src="${originalUrl}" alt="${item.name}" />`;
     
@@ -251,6 +256,7 @@ const ImageManager = () => {
     return {
       original: originalUrl,
       markdown: markdownUrl,
+      markdownWithLink: markdownWithLinkUrl,
       html: htmlUrl,
       bbcode: bbcodeUrl
     };
@@ -347,6 +353,12 @@ const ImageManager = () => {
                         key: 'markdown',
                         label: (
                           <a onClick={() => copyToClipboard(links.markdown)}>{t.markdownFormat}</a>
+                        ),
+                      },
+                      {
+                        key: 'markdownWithLink',
+                        label: (
+                          <a onClick={() => copyToClipboard(links.markdownWithLink)}>{t.markdownWithLinkFormat}</a>
                         ),
                       },
                       {
@@ -466,6 +478,12 @@ const ImageManager = () => {
                               key: 'markdown',
                               label: (
                                 <a onClick={() => copyToClipboard(links.markdown)}>{t.markdownFormat}</a>
+                              ),
+                            },
+                            {
+                              key: 'markdownWithLink',
+                              label: (
+                                <a onClick={() => copyToClipboard(links.markdownWithLink)}>{t.markdownWithLinkFormat}</a>
                               ),
                             },
                             {
