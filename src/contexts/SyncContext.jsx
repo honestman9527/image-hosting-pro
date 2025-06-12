@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
 import { message } from 'antd';
 import { initGistSync, loadSettingsFromGist, loadHistoryFromGist, saveSettingsToGist, saveHistoryToGist } from '../utils/gistSync';
 
@@ -20,7 +20,7 @@ export const SyncProvider = ({ children }) => {
   });
 
   // 初始化同步
-  const initializeSync = async (token) => {
+  const initializeSync = useCallback(async (token) => {
     if (!token) return;
     
     setSyncState(prev => ({ ...prev, isSyncing: true, error: null }));
@@ -82,10 +82,10 @@ export const SyncProvider = ({ children }) => {
       message.error(errorMessage);
       return false;
     }
-  };
+  }, []);
 
   // 同步设置到Gist
-  const syncSettings = async (settings) => {
+  const syncSettings = useCallback(async (settings) => {
     const { octokit, gistId, isInitialized } = syncState;
     
     if (!isInitialized || !octokit || !gistId) {
@@ -118,10 +118,10 @@ export const SyncProvider = ({ children }) => {
       message.error(`同步设置失败: ${error.message}`);
       return false;
     }
-  };
+  }, [syncState]);
 
   // 同步历史到Gist
-  const syncHistory = async (history) => {
+  const syncHistory = useCallback(async (history) => {
     const { octokit, gistId, isInitialized } = syncState;
     
     if (!isInitialized || !octokit || !gistId) {
@@ -150,10 +150,10 @@ export const SyncProvider = ({ children }) => {
       message.error(`同步历史失败: ${error.message}`);
       return false;
     }
-  };
+  }, [syncState]);
 
   // 重新同步所有数据
-  const resyncAll = async () => {
+  const resyncAll = useCallback(async () => {
     const { octokit, gistId, isInitialized } = syncState;
     
     if (!isInitialized || !octokit || !gistId) {
@@ -194,7 +194,7 @@ export const SyncProvider = ({ children }) => {
       message.error(`重新同步失败: ${error.message}`);
       return false;
     }
-  };
+  }, [syncState]);
 
   // 提供Context值
   const value = {
