@@ -1,9 +1,20 @@
+import React, { lazy, Suspense } from 'react';
 import { createBrowserRouter } from 'react-router-dom';
+import { Spin } from 'antd';
 import App from './App';
-import Home from './pages/Home';
-import Upload from './pages/Upload';
-import ImageManager from './pages/ImageManager';
-import Settings from './pages/Settings';
+
+// 使用 React.lazy 进行组件的懒加载
+const Home = lazy(() => import('./pages/Home'));
+const Upload = lazy(() => import('./pages/Upload'));
+const ImageManager = lazy(() => import('./pages/ImageManager'));
+const Settings = lazy(() => import('./pages/Settings'));
+
+// 一个简单的加载中组件
+const PageLoading = () => (
+  <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '80vh' }}>
+    <Spin size="large" />
+  </div>
+);
 
 const router = createBrowserRouter([
   {
@@ -12,19 +23,19 @@ const router = createBrowserRouter([
     children: [
       {
         index: true,
-        element: <Home />,
+        element: <Suspense fallback={<PageLoading />}><Home /></Suspense>,
       },
       {
         path: 'upload',
-        element: <Upload />,
+        element: <Suspense fallback={<PageLoading />}><Upload /></Suspense>,
       },
       {
         path: 'images',
-        element: <ImageManager />,
+        element: <Suspense fallback={<PageLoading />}><ImageManager /></Suspense>,
       },
       {
         path: 'settings',
-        element: <Settings />,
+        element: <Suspense fallback={<PageLoading />}><Settings /></Suspense>,
       },
     ],
   },
