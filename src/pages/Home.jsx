@@ -10,7 +10,7 @@ const Home = () => {
   return (
     <div className="home-container">
       <Typography className="home-header">
-        <Title>GitHub图床工具</Title>
+        <Title>HM 图床</Title>
         <Paragraph>
           轻松上传图片到GitHub，获取CDN链接，管理您的图片资源
         </Paragraph>

@@ -52,7 +52,7 @@ function App() {
       <Layout className="app-layout">
         <Header className="app-header">
           <div className="logo-container">
-            <Title level={4} className="app-title">GitHub图床</Title>
+            <Title level={4} className="app-title">HM 图床</Title>
           </div>
           <Menu
             mode="horizontal"
@@ -66,7 +66,7 @@ function App() {
           <Outlet />
         </Content>
         <Footer className="app-footer">
-          GitHub图床工具 ©{new Date().getFullYear()} Created with React & Ant Design
+          HM 图床 ©{new Date().getFullYear()} Created with React & Ant Design
         </Footer>
       </Layout>
     </ConfigProvider>
