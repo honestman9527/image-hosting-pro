@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
-import { Outlet, Link, useLocation } from 'react-router-dom'
-import { Layout, Menu, Typography, ConfigProvider, theme } from 'antd'
-import { UploadOutlined, PictureOutlined, HistoryOutlined, SettingOutlined, GithubOutlined } from '@ant-design/icons'
+import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
+import { Layout, Menu, Typography, ConfigProvider, theme, Button, Dropdown, Space } from 'antd'
+import { UploadOutlined, PictureOutlined, SettingOutlined, MenuOutlined, SunOutlined, MoonOutlined } from '@ant-design/icons'
 import { useSync } from './contexts/SyncContext'
+import { useTheme } from './contexts/ThemeContext'
 import './App.css'
 
 const { Header, Content, Footer } = Layout
@@ -10,7 +11,8 @@ const { Title } = Typography
 
 function App() {
   const location = useLocation()
-  const [current, setCurrent] = useState(location.pathname)
+  const navigate = useNavigate();
+  const { theme: currentTheme, toggleTheme } = useTheme();
   const { isInitialized, initializeSync } = useSync()
 
   // 自动同步逻辑
@@ -27,56 +29,68 @@ function App() {
     }
   }, [isInitialized, initializeSync]);
 
-  // 菜单项点击处理
-  const handleMenuClick = (e) => {
-    setCurrent(e.key)
-  }
-
-  // 菜单项配置
   const menuItems = [
-    {
-      key: '/',
-      icon: <GithubOutlined />,
-      label: <Link to="/">首页</Link>,
-    },
-    {
-      key: '/upload',
-      icon: <UploadOutlined />,
-      label: <Link to="/upload">上传图片</Link>,
-    },
     {
       key: '/images',
       icon: <PictureOutlined />,
-      label: <Link to="/images">图片管理</Link>,
+      label: '图片管理',
+      onClick: () => navigate('/images')
     },
     {
       key: '/settings',
       icon: <SettingOutlined />,
-      label: <Link to="/settings">设置</Link>,
+      label: '设置',
+      onClick: () => navigate('/settings')
     },
-  ]
+  ];
+
+  const menu = (
+    <Menu items={menuItems} />
+  );
 
   return (
     <ConfigProvider
       theme={{
-        algorithm: theme.defaultAlgorithm,
+        algorithm: currentTheme === 'dark' ? theme.darkAlgorithm : theme.defaultAlgorithm,
         token: {
           colorPrimary: '#1890ff',
+          colorBgContainer: 'var(--component-background)',
+          colorBorder: 'var(--border-color)',
         },
+        components: {
+          Layout: {
+            headerBg: 'transparent',
+            bodyBg: 'transparent',
+            footerBg: 'transparent'
+          },
+          Card: {
+            colorBgContainer: 'transparent'
+          },
+          Menu: {
+            colorItemBg: 'transparent',
+          }
+        }
       }}
     >
       <Layout className="app-layout">
         <Header className="app-header">
           <div className="logo-container">
+            <Link to="/">
+              <img src="/src/assets/icons/hm.png" alt="logo" className="logo-image" />
+            </Link>
             <Title level={4} className="app-title">HM 图床</Title>
           </div>
-          <Menu
-            mode="horizontal"
-            selectedKeys={[current]}
-            onClick={handleMenuClick}
-            items={menuItems}
-            className="app-menu"
-          />
+          <Space>
+            <Button 
+              type="text" 
+              icon={currentTheme === 'dark' ? <SunOutlined /> : <MoonOutlined />} 
+              onClick={toggleTheme}
+              className="theme-button"
+            />
+            <Dropdown overlay={menu} trigger={['click']}>
+              <Button type="text" icon={<MenuOutlined />} className="menu-button" />
+            </Dropdown>
+          </Space>
         </Header>
         <Content className="app-content">
           <Outlet />

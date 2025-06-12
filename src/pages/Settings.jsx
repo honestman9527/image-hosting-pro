@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Typography, Form, Input, Button, Card, message, Alert, Switch, Radio, Spin, Divider, Badge } from 'antd';
-import { GithubOutlined, LinkOutlined, SaveOutlined, QuestionCircleOutlined, GlobalOutlined, CloudSyncOutlined, CloudUploadOutlined } from '@ant-design/icons';
+import { GithubOutlined, LinkOutlined, SaveOutlined, QuestionCircleOutlined, GlobalOutlined, CloudSyncOutlined, CloudUploadOutlined, ArrowLeftOutlined } from '@ant-design/icons';
 import { Octokit } from '@octokit/rest';
 import { useSync } from '../contexts/SyncContext';
 import './Settings.css';
@@ -12,6 +13,7 @@ const Settings = () => {
   const [loading, setLoading] = useState(false);
   const [testLoading, setTestLoading] = useState(false);
   const [testResult, setTestResult] = useState(null);
+  const navigate = useNavigate();
   // 单独保存token，不存储在localStorage
   const [token, setToken] = useState('');
   const [settings, setSettings] = useState(() => {
@@ -380,199 +382,214 @@ const Settings = () => {
     return new Date(date).toLocaleString();
   };
 
+  const pageTitle = (
+    <div className="page-title-container">
+      <Button 
+        type="text" 
+        icon={<ArrowLeftOutlined />} 
+        onClick={() => navigate('/')}
+        className="back-button"
+      >
+        返回
+      </Button>
+      <Title level={2} style={{ margin: 0 }}>{t.title}</Title>
+    </div>
+  );
+
   return (
     <div className="settings-container">
-      <div className="settings-header">
-        <Title level={2}>{t.title}</Title>
-        <Paragraph>{t.subtitle}</Paragraph>
-      </div>
-      
       <Form
         form={form}
         layout="vertical"
         onFinish={handleSave}
         initialValues={settings}
       >
-        <Card title={<><GithubOutlined /> {t.githubSettings}</>} className="settings-card">
-          {/* 移除token输入框，使用环境变量中的token */}
-          {!import.meta.env.VITE_GITHUB_TOKEN && (
-            <Alert
-              message="GitHub令牌未配置"
-              description="请联系管理员在Cloudflare Pages中配置VITE_GITHUB_TOKEN环境变量。"
-              type="warning"
-              showIcon
-              style={{ marginBottom: 16 }}
-            />
-          )}
-          
-          {import.meta.env.VITE_GITHUB_TOKEN && (
-            <Alert
-              message="GitHub令牌已配置"
-              description="令牌已从环境变量中加载，无需手动输入。"
-              type="success"
-              showIcon
-              style={{ marginBottom: 16 }}
-            />
-          )}
-          
-          <Form.Item
-            name="owner"
-            label={t.owner}
-            rules={[{ required: false, message: t.ownerRequired }]}
-            extra={t.ownerExtra}
-          >
-            <Input placeholder={t.ownerPlaceholder} />
-          </Form.Item>
-          
-          <Form.Item
-            name="repo"
-            label={t.repo}
-            rules={[{ required: false, message: t.repoRequired }]}
-            extra={t.repoExtra}
-          >
-            <Input placeholder={t.repoPlaceholder} />
-          </Form.Item>
-          
-          <Form.Item
-            name="branch"
-            label={t.branch}
-            rules={[{ required: true, message: t.branchRequired }]}
-            extra={t.branchExtra}
-          >
-            <Input placeholder={t.branchPlaceholder} />
-          </Form.Item>
-          
-          <Form.Item
-            name="path"
-            label={t.path}
-            rules={[{ required: true, message: t.pathRequired }]}
-            extra={t.pathExtra}
-          >
-            <Input placeholder={t.pathPlaceholder} />
-          </Form.Item>
-          
-          <Button 
-            type="default" 
-            onClick={testConnection} 
-            loading={testLoading}
-          >
-            {t.testConnection}
-          </Button>
-          
-          {testResult && (
-            <Alert
-              className="settings-alert"
-              message={testResult.message}
-              type={testResult.success ? 'success' : 'error'}
-              showIcon
-            />
-          )}
-        </Card>
-        
-        <Card title={<><CloudSyncOutlined /> {t.syncSettings}</>} className="settings-card">
-          <Form.Item
-            name="enableSync"
-            valuePropName="checked"
-            extra={t.enableSyncExtra}
-          >
-            <Switch 
-              checkedChildren={t.enableSync} 
-              unCheckedChildren={t.enableSync}
-              onChange={handleSyncChange}
-            />
-          </Form.Item>
-          
-          <Alert
-            className="settings-alert"
-            message={t.syncPermissions}
-            description={t.syncPermissionsExtra}
-            type="info"
-            showIcon
-          />
-          
+        <Card title={pageTitle} bordered={false} className="settings-card-main">
+          <Paragraph>{t.subtitle}</Paragraph>
           <Divider />
-          
-          <div className="sync-status">
-            <div className="sync-status-item">
-              <Text strong>{t.syncStatus}:</Text>
-              <Badge 
-                status={isInitialized ? 'success' : 'default'} 
-                text={isInitialized ? t.syncInitialized : t.syncNotInitialized} 
+          <div className="settings-grid">
+            <Card title={<><GithubOutlined /> {t.githubSettings}</>} className="settings-card">
+              {/* 移除token输入框，使用环境变量中的token */}
+              {!import.meta.env.VITE_GITHUB_TOKEN && (
+                <Alert
+                  message="GitHub令牌未配置"
+                  description="请联系管理员在Cloudflare Pages中配置VITE_GITHUB_TOKEN环境变量。"
+                  type="warning"
+                  showIcon
+                  style={{ marginBottom: 16 }}
+                />
+              )}
+              
+              {import.meta.env.VITE_GITHUB_TOKEN && (
+                <Alert
+                  message="GitHub令牌已配置"
+                  description="令牌已从环境变量中加载，无需手动输入。"
+                  type="success"
+                  showIcon
+                  style={{ marginBottom: 16 }}
+                />
+              )}
+              
+              <Form.Item
+                name="owner"
+                label={t.owner}
+                rules={[{ required: false, message: t.ownerRequired }]}
+                extra={t.ownerExtra}
+              >
+                <Input placeholder={t.ownerPlaceholder} />
+              </Form.Item>
+              
+              <Form.Item
+                name="repo"
+                label={t.repo}
+                rules={[{ required: false, message: t.repoRequired }]}
+                extra={t.repoExtra}
+              >
+                <Input placeholder={t.repoPlaceholder} />
+              </Form.Item>
+              
+              <Form.Item
+                name="branch"
+                label={t.branch}
+                rules={[{ required: true, message: t.branchRequired }]}
+                extra={t.branchExtra}
+              >
+                <Input placeholder={t.branchPlaceholder} />
+              </Form.Item>
+              
+              <Form.Item
+                name="path"
+                label={t.path}
+                rules={[{ required: true, message: t.pathRequired }]}
+                extra={t.pathExtra}
+              >
+                <Input placeholder={t.pathPlaceholder} />
+              </Form.Item>
+              
+              <Button 
+                type="default" 
+                onClick={testConnection} 
+                loading={testLoading}
+              >
+                {t.testConnection}
+              </Button>
+              
+              {testResult && (
+                <Alert
+                  className="settings-alert"
+                  message={testResult.message}
+                  type={testResult.success ? 'success' : 'error'}
+                  showIcon
+                />
+              )}
+            </Card>
+            
+            <Card title={<><CloudSyncOutlined /> {t.syncSettings}</>} className="settings-card">
+              <Form.Item
+                name="enableSync"
+                valuePropName="checked"
+                extra={t.enableSyncExtra}
+              >
+                <Switch 
+                  checkedChildren={t.enableSync} 
+                  unCheckedChildren={t.enableSync}
+                  onChange={handleSyncChange}
+                />
+              </Form.Item>
+              
+              <Alert
+                className="settings-alert"
+                message={t.syncPermissions}
+                description={t.syncPermissionsExtra}
+                type="info"
+                showIcon
               />
-            </div>
-            
-            <div className="sync-status-item">
-              <Text strong>{t.lastSynced}:</Text>
-              <Text>{lastSynced ? formatDateTime(lastSynced) : '-'}</Text>
-            </div>
-            
-            {syncError && (
-              <div className="sync-status-item">
-                <Text strong>{t.syncError}:</Text>
-                <Text type="danger">{syncError}</Text>
+              
+              <Divider />
+              
+              <div className="sync-status">
+                <div className="sync-status-item">
+                  <Text strong>{t.syncStatus}:</Text>
+                  <Badge 
+                    status={isInitialized ? 'success' : 'default'} 
+                    text={isInitialized ? t.syncInitialized : t.syncNotInitialized} 
+                  />
+                </div>
+                
+                <div className="sync-status-item">
+                  <Text strong>{t.lastSynced}:</Text>
+                  <Text>{lastSynced ? formatDateTime(lastSynced) : '-'}</Text>
+                </div>
+                
+                {syncError && (
+                  <div className="sync-status-item">
+                    <Text strong>{t.syncError}:</Text>
+                    <Text type="danger">{syncError}</Text>
+                  </div>
+                )}
               </div>
-            )}
+              
+              <Button 
+                type="primary" 
+                icon={<CloudUploadOutlined />}
+                onClick={handleManualSync}
+                loading={isSyncing}
+                disabled={!settings.token || !settings.enableSync}
+                className="sync-button"
+              >
+                {isSyncing ? t.syncInProgress : t.syncNow}
+              </Button>
+            </Card>
+            
+            <Card title={<><LinkOutlined /> {t.cdnSettings}</>} className="settings-card">
+              <Form.Item
+                name="customDomain"
+                label={t.customDomain}
+                extra={t.customDomainExtra}
+              >
+                <Input placeholder={t.customDomainPlaceholder} />
+              </Form.Item>
+            </Card>
+            
+            <Card title={<><GlobalOutlined /> {t.languageSettings}</>} className="settings-card">
+              <Form.Item
+                name="language"
+                label={t.languageLabel}
+              >
+                <Radio.Group onChange={handleLanguageChange}>
+                  <Radio value="zh">中文</Radio>
+                  <Radio value="en">English</Radio>
+                </Radio.Group>
+              </Form.Item>
+            </Card>
+            
+            <Card title={<><QuestionCircleOutlined /> {t.about}</>} className="settings-card">
+              <Paragraph>{t.aboutContent}</Paragraph>
+              
+              <Paragraph>
+                <strong>{t.howToGetToken}</strong>
+                <ol>
+                  <li>{t.tokenStep1} <a href="https://github.com/settings/tokens" target="_blank" rel="noopener noreferrer">{t.tokenStep1Link}</a></li>
+                  <li>{t.tokenStep2}</li>
+                  <li>{t.tokenStep3}</li>
+                  <li>{t.tokenStep4}</li>
+                  <li>{t.tokenStep5}</li>
+                </ol>
+              </Paragraph>
+            </Card>
           </div>
           
-          <Button 
-            type="primary" 
-            icon={<CloudUploadOutlined />}
-            onClick={handleManualSync}
-            loading={isSyncing}
-            disabled={!settings.token || !settings.enableSync}
-            className="sync-button"
-          >
-            {isSyncing ? t.syncInProgress : t.syncNow}
-          </Button>
+          <div className="settings-actions">
+            <Button 
+              type="primary" 
+              htmlType="submit" 
+              icon={<SaveOutlined />} 
+              loading={loading}
+            >
+              {t.saveSettings}
+            </Button>
+          </div>
         </Card>
-        
-        <Card title={<><LinkOutlined /> {t.cdnSettings}</>} className="settings-card">
-          <Form.Item
-            name="customDomain"
-            label={t.customDomain}
-            extra={t.customDomainExtra}
-          >
-            <Input placeholder={t.customDomainPlaceholder} />
-          </Form.Item>
-        </Card>
-        
-        <Card title={<><GlobalOutlined /> {t.languageSettings}</>} className="settings-card">
-          <Form.Item
-            name="language"
-            label={t.languageLabel}
-          >
-            <Radio.Group onChange={handleLanguageChange}>
-              <Radio value="zh">中文</Radio>
-              <Radio value="en">English</Radio>
-            </Radio.Group>
-          </Form.Item>
-        </Card>
-        
-        <Card title={<><QuestionCircleOutlined /> {t.about}</>} className="settings-card">
-          <Paragraph>{t.aboutContent}</Paragraph>
-          
-          <Paragraph>
-            <strong>{t.howToGetToken}</strong>
-            <ol>
-              <li>{t.tokenStep1} <a href="https://github.com/settings/tokens" target="_blank" rel="noopener noreferrer">{t.tokenStep1Link}</a></li>
-              <li>{t.tokenStep2}</li>
-              <li>{t.tokenStep3}</li>
-              <li>{t.tokenStep4}</li>
-              <li>{t.tokenStep5}</li>
-            </ol>
-          </Paragraph>
-        </Card>
-        
-        <div className="settings-actions">
-          <Button 
-            type="primary" 
-            htmlType="submit" 
-            icon={<SaveOutlined />} 
-            loading={loading}
-          >
-            {t.saveSettings}
-          </Button>
-        </div>
       </Form>
     </div>
   );

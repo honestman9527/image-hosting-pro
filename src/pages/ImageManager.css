@@ -1,8 +1,42 @@
 /* ImageManager页面样式 - 整合了Gallery和History的样式 */
 .image-manager-container {
+  width: 100%;
   max-width: 1200px;
   margin: 0 auto;
   padding: 20px;
+}
+
+.manager-card {
+  background: var(--component-background) !important;
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--border-color) !important;
+  border-radius: 12px !important;
+  overflow: hidden;
+}
+
+.page-title-container {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.back-button {
+  color: var(--text-color) !important;
+  font-size: 16px;
+}
+
+.controls-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 24px;
+  align-items: center;
+}
+
+.search-input {
+  flex: 1;
+  min-width: 200px;
 }
 
 .image-manager-header {
@@ -31,11 +65,6 @@
   margin-bottom: 16px;
 }
 
-.search-container {
-  flex: 1;
-  min-width: 250px;
-}
-
 .filter-container {
   display: flex;
   gap: 8px;
@@ -45,11 +74,6 @@
 .view-mode-container {
   display: flex;
   justify-content: flex-end;
-}
-
-.search-input {
-  width: 100%;
-  max-width: 400px;
 }
 
 .date-filter {

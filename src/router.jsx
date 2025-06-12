@@ -4,7 +4,6 @@ import { Spin } from 'antd';
 import App from './App';
 
 // 使用 React.lazy 进行组件的懒加载
-const Home = lazy(() => import('./pages/Home'));
 const Upload = lazy(() => import('./pages/Upload'));
 const ImageManager = lazy(() => import('./pages/ImageManager'));
 const Settings = lazy(() => import('./pages/Settings'));
@@ -23,10 +22,6 @@ const router = createBrowserRouter([
     children: [
       {
         index: true,
-        element: <Suspense fallback={<PageLoading />}><Home /></Suspense>,
-      },
-      {
-        path: 'upload',
         element: <Suspense fallback={<PageLoading />}><Upload /></Suspense>,
       },
       {

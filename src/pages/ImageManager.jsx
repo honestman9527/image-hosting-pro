@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback, useMemo, lazy, Suspense } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Typography, Card, Image as AntImage, Button, Input, Empty, message, Pagination, List, DatePicker, Dropdown, Space, Radio, Tabs, Spin } from 'antd';
 import LazyLoad from 'react-lazyload';
-import { CopyOutlined, DeleteOutlined, CalendarOutlined, DownOutlined, SearchOutlined, CloudSyncOutlined } from '@ant-design/icons';
+import { CopyOutlined, DeleteOutlined, CalendarOutlined, DownOutlined, SearchOutlined, CloudSyncOutlined, ArrowLeftOutlined } from '@ant-design/icons';
 import { Popconfirm } from 'antd';
 import { useSync } from '../contexts/SyncContext';
 import './ImageManager.css';
@@ -31,6 +32,8 @@ const ImageManager = () => {
       enableSync: false // 是否启用云同步
     };
   });
+  
+  const navigate = useNavigate();
   
   // 获取同步上下文
   const { isInitialized, isSyncing, syncHistory } = useSync();
@@ -544,25 +547,34 @@ const ImageManager = () => {
     </div>
   );
 
+  const pageTitle = (
+    <div className="page-title-container">
+      <Button 
+        type="text" 
+        icon={<ArrowLeftOutlined />} 
+        onClick={() => navigate('/')}
+        className="back-button"
+      >
+        返回
+      </Button>
+      <Title level={2} style={{ margin: 0 }}>{t.title}</Title>
+    </div>
+  );
+
   return (
     <div className="image-manager-container">
-      <div className="image-manager-header">
-        <Title level={2}>{t.title}</Title>
+      <Card title={pageTitle} bordered={false} className="manager-card">
         <Paragraph>{t.subtitle}</Paragraph>
-      </div>
-      
-      <Card className="image-manager-controls">
-        <div className="search-filter-container">
-          <div className="search-container">
-            <Search
-              placeholder={t.search}
-              value={searchText}
-              onChange={(e) => setSearchText(e.target.value)}
-              onSearch={handleSearch}
-              style={{ width: '100%' }}
-              allowClear
-            />
-          </div>
+        
+        <div className="controls-container">
+          <Search
+            placeholder={t.search}
+            value={searchText}
+            onChange={(e) => setSearchText(e.target.value)}
+            onSearch={handleSearch}
+            style={{ width: '100%' }}
+            allowClear
+          />
           
           <div className="filter-container">
             <RangePicker 
