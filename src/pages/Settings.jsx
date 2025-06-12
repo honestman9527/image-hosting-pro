@@ -176,48 +176,13 @@ const Settings = () => {
 
   // 从Cloudflare Pages环境变量获取token
   useEffect(() => {
-    async function getCloudflareEnvToken() {
-      try {
-        // 尝试从环境变量中获取token
-        // Cloudflare Pages会将环境变量暴露给客户端，格式为：VITE_GITHUB_TOKEN
-        const cfToken = import.meta.env.VITE_GITHUB_TOKEN;
-        
-        if (cfToken) {
-          console.log('从Cloudflare Pages环境变量获取到token');
-          // 仅在内存中保存token，不存储到localStorage
-          setToken(cfToken);
-          
-          // 如果启用了同步，尝试初始化
-          if (settings.enableSync && !isInitialized) {
-            console.log('检测到同步已启用但未初始化，自动初始化同步');
-            initializeSync(cfToken).then(success => {
-              if (success) {
-                console.log('自动初始化同步成功');
-                message.success('云同步已自动连接');
-              } else {
-                console.error('自动初始化同步失败');
-              }
-            });
-          }
-        }
-      } catch (error) {
-        console.error('从环境变量获取token失败:', error);
-      }
+    const cfToken = import.meta.env.VITE_GITHUB_TOKEN;
+    if (cfToken) {
+      console.log('从Cloudflare Pages环境变量获取到token');
+      // 仅在内存中保存token，不存储到localStorage
+      setToken(cfToken);
     }
-    
-    getCloudflareEnvToken();
-  }, [settings.enableSync, isInitialized]); // 依赖项添加enableSync和isInitialized，以便状态变更时重新执行
-
-  // 监听同步状态变化
-  useEffect(() => {
-    // 检查设置中的同步状态和当前实际同步状态是否一致
-    if (settings.enableSync && !isInitialized && token) {
-      console.log('同步状态不一致，尝试重新初始化');
-      initializeSync(token).catch(err => {
-        console.error('初始化同步失败:', err);
-      });
-    }
-  }, [settings.enableSync, isInitialized, token]);
+  }, []);
 
   // 保存设置
   const handleSave = async (values) => {

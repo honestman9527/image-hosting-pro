@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Outlet, Link, useLocation } from 'react-router-dom'
 import { Layout, Menu, Typography, ConfigProvider, theme } from 'antd'
 import { UploadOutlined, PictureOutlined, HistoryOutlined, SettingOutlined, GithubOutlined } from '@ant-design/icons'
+import { useSync } from './contexts/SyncContext'
 import './App.css'
 
 const { Header, Content, Footer } = Layout
@@ -10,6 +11,21 @@ const { Title } = Typography
 function App() {
   const location = useLocation()
   const [current, setCurrent] = useState(location.pathname)
+  const { isInitialized, initializeSync } = useSync()
+
+  // 自动同步逻辑
+  useEffect(() => {
+    const settingsStr = localStorage.getItem('github-settings');
+    if (settingsStr) {
+      const settings = JSON.parse(settingsStr);
+      const token = import.meta.env.VITE_GITHUB_TOKEN;
+
+      if (settings.enableSync && token && !isInitialized) {
+        console.log('App.jsx: 检测到已启用云同步，将在应用加载时自动同步。');
+        initializeSync(token);
+      }
+    }
+  }, [isInitialized, initializeSync]);
 
   // 菜单项点击处理
   const handleMenuClick = (e) => {
