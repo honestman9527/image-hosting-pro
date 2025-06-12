@@ -76,7 +76,7 @@ function App() {
         <Header className="app-header">
           <div className="logo-container">
             <Link to="/">
-              <img src="/src/assets/icons/hm.png" alt="logo" className="logo-image" />
+              <img src="/hm.png" alt="logo" className="logo-image" />
             </Link>
             <Title level={4} className="app-title">HM 图床</Title>
           </div>
