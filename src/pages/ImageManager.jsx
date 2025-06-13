@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo, lazy, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Typography, Card, Image as AntImage, Button, Input, Empty, message, Pagination, List, DatePicker, Dropdown, Space, Radio, Tabs, Spin } from 'antd';
+import { Typography, Card, Image as AntImage, Button, Input, Empty, message, Pagination, List, DatePicker, Dropdown, Space, Radio, Tabs, Spin, Menu } from 'antd';
 import LazyLoad from 'react-lazyload';
 import { CopyOutlined, DeleteOutlined, CalendarOutlined, DownOutlined, SearchOutlined, CloudSyncOutlined, ArrowLeftOutlined } from '@ant-design/icons';
 import { Popconfirm } from 'antd';
@@ -18,7 +18,8 @@ const ImageManager = () => {
   const [searchText, setSearchText] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [dateRange, setDateRange] = useState(null);
-  const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'timeline'
+  const [viewMode, setViewMode] = useState('grid');
+  const [selectedFormat, setSelectedFormat] = useState('url');
   const [settings, setSettings] = useState(() => {
     const savedSettings = localStorage.getItem('github-settings');
     return savedSettings ? JSON.parse(savedSettings) : {
@@ -61,6 +62,7 @@ const ImageManager = () => {
       endDate: '结束日期',
       clearFilters: '清除筛选',
       originalLink: '原始链接',
+      urlFormat: 'URL格式',
       markdownFormat: 'Markdown格式',
       markdownWithLinkFormat: 'Markdown带链接格式',
       htmlFormat: 'HTML格式',
@@ -96,6 +98,7 @@ const ImageManager = () => {
       endDate: 'End Date',
       clearFilters: 'Clear Filters',
       originalLink: 'Original Link',
+      urlFormat: 'URL Format',
       markdownFormat: 'Markdown Format',
       markdownWithLinkFormat: 'Markdown with Link Format',
       htmlFormat: 'HTML Format',
@@ -232,6 +235,18 @@ const ImageManager = () => {
     setCurrentPage(1);
   };
 
+  // 生成不同格式的链接
+  const generateLinks = (item) => {
+    const originalUrl = item.url;
+    return {
+      url: originalUrl,
+      markdown: `![${item.name}](${originalUrl})`,
+      markdownWithLink: `[![${item.name}](${originalUrl})](${originalUrl})`,
+      html: `<img src="${originalUrl}" alt="${item.name}" />`,
+      bbcode: `[img]${originalUrl}[/img]`
+    };
+  };
+
   // 复制链接
   const copyToClipboard = (text) => {
     navigator.clipboard.writeText(text)
@@ -239,30 +254,40 @@ const ImageManager = () => {
       .catch(err => message.error(`${t.copyFailed}: ${err}`));
   };
 
-  // 生成不同格式的链接
-  const generateLinks = (item) => {
-    // 原始链接
-    const originalUrl = item.url;
-    
-    // Markdown格式
-    const markdownUrl = `![${item.name}](${originalUrl})`;
-    
-    // Markdown带链接格式（图片点击跳转到图片链接）
-    const markdownWithLinkUrl = `[![${item.name}](${originalUrl})](${originalUrl})`;
-    
-    // HTML格式
-    const htmlUrl = `<img src="${originalUrl}" alt="${item.name}" />`;
-    
-    // BBCode格式
-    const bbcodeUrl = `[img]${originalUrl}[/img]`;
-    
-    return {
-      original: originalUrl,
-      markdown: markdownUrl,
-      markdownWithLink: markdownWithLinkUrl,
-      html: htmlUrl,
-      bbcode: bbcodeUrl
-    };
+  // 链接格式下拉菜单项
+  const linkFormatMenu = (
+    <Menu
+      onClick={({ key }) => setSelectedFormat(key)}
+      selectedKeys={[selectedFormat]}
+      items={[
+        { key: 'url', label: t.urlFormat },
+        { key: 'markdown', label: t.markdownFormat },
+        { key: 'markdownWithLink', label: t.markdownWithLinkFormat },
+        { key: 'bbcode', label: t.bbcodeFormat },
+        { key: 'html', label: t.htmlFormat },
+      ]}
+    />
+  );
+
+  // 复制链接按钮
+  const CopyLinkButton = ({ image }) => {
+    const links = generateLinks(image);
+    return (
+      <Button
+        type="default"
+        icon={<CopyOutlined />}
+        onClick={() => copyToClipboard(links[selectedFormat])}
+        style={{ marginRight: 8 }}
+      >
+        {t.copyLink}
+      </Button>
+    );
+  };
+
+  // 处理图片点击
+  const handleImageClick = (image) => {
+    const links = generateLinks(image);
+    copyToClipboard(links[selectedFormat]);
   };
 
   // 删除记录
@@ -320,103 +345,59 @@ const ImageManager = () => {
   const renderGridView = () => (
     <>
       <div className="image-grid">
-        {currentImages.map((image, index) => {
-          const links = generateLinks(image);
-          return (
-            <Card
-              key={index}
-              hoverable
-              className="image-card"
-              cover={
-                <div className="image-container">
-                  <LazyLoad height={200} once placeholder={<div className="image-loading"><Spin /></div>}>
-                    <AntImage
-                      src={image.url}
-                      alt={image.name}
-                      className="gallery-image"
-                      loading="lazy"
-                      preview={{
-                        mask: <div className="image-preview-mask">{t.preview}</div>
-                      }}
-                    />
-                  </LazyLoad>
+        {currentImages.map((image, index) => (
+          <Card
+            key={index}
+            hoverable
+            className="image-card"
+            cover={
+              <div className="image-container">
+                <LazyLoad height={200} offset={100} once placeholder={<div className="image-loading"><Spin /></div>} debounce={100}>
+                  <AntImage
+                    src={image.url}
+                    alt={image.name}
+                    className="gallery-image"
+                    loading="lazy"
+                    preview={{
+                      mask: <div className="image-preview-mask">{t.preview}</div>
+                    }}
+                    placeholder={<div className="image-loading"><Spin /></div>}
+                  />
+                </LazyLoad>
+              </div>
+            }
+            actions={[
+              <CopyLinkButton image={image} key="copy" />, // 复制链接按钮
+              <Popconfirm
+                title={t.deleteConfirmTitle}
+                description={t.deleteConfirmDesc}
+                onConfirm={() => deleteRecord(images.findIndex(img => img.date === image.date && img.name === image.name))}
+                okText={t.confirm}
+                cancelText={t.cancel}
+                key="delete"
+              >
+                <Button 
+                  type="text" 
+                  danger 
+                  icon={<DeleteOutlined />}
+                >
+                  {t.deleteRecord}
+                </Button>
+              </Popconfirm>
+            ]}
+          >
+            <Card.Meta
+              title={image.name}
+              description={
+                <div className="image-info">
+                  <p>{t.size}: {(image.size / 1024).toFixed(1)} {t.kb}</p>
+                  <p>{t.uploadTime}: {new Date(image.date).toLocaleString()}</p>
                 </div>
               }
-              actions={[
-                <Dropdown
-                  menu={{
-                    items: [
-                      {
-                        key: 'original',
-                        label: (
-                          <a onClick={() => copyToClipboard(links.original)}>{t.originalLink}</a>
-                        ),
-                      },
-                      {
-                        key: 'markdown',
-                        label: (
-                          <a onClick={() => copyToClipboard(links.markdown)}>{t.markdownFormat}</a>
-                        ),
-                      },
-                      {
-                        key: 'markdownWithLink',
-                        label: (
-                          <a onClick={() => copyToClipboard(links.markdownWithLink)}>{t.markdownWithLinkFormat}</a>
-                        ),
-                      },
-                      {
-                        key: 'html',
-                        label: (
-                          <a onClick={() => copyToClipboard(links.html)}>{t.htmlFormat}</a>
-                        ),
-                      },
-                      {
-                        key: 'bbcode',
-                        label: (
-                          <a onClick={() => copyToClipboard(links.bbcode)}>{t.bbcodeFormat}</a>
-                        ),
-                      },
-                    ],
-                  }}
-                >
-                  <Button type="text" icon={<CopyOutlined />}>
-                    <Space>
-                      {t.copyLink}
-                      <DownOutlined />
-                    </Space>
-                  </Button>
-                </Dropdown>,
-                <Popconfirm
-                  title={t.deleteConfirmTitle}
-                  description={t.deleteConfirmDesc}
-                  onConfirm={() => deleteRecord(images.findIndex(img => img.date === image.date && img.name === image.name))}
-                  okText={t.confirm}
-                  cancelText={t.cancel}
-                >
-                  <Button 
-                    type="text" 
-                    danger 
-                    icon={<DeleteOutlined />}
-                  >
-                    {t.deleteRecord}
-                  </Button>
-                </Popconfirm>
-              ]}
-            >
-              <Card.Meta
-                title={image.name}
-                description={
-                  <div className="image-info">
-                    <p>{t.size}: {(image.size / 1024).toFixed(1)} {t.kb}</p>
-                    <p>{t.uploadTime}: {new Date(image.date).toLocaleString()}</p>
-                  </div>
-                }
-              />
-            </Card>
-          );
-        })}
+            />
+          </Card>
+        ))}
       </div>
-
       <div className="pagination-container">
         <Pagination
           current={currentPage}
@@ -441,100 +422,55 @@ const ImageManager = () => {
             className="history-list"
             itemLayout="horizontal"
             dataSource={group.items}
-            renderItem={(item) => {
-              const links = generateLinks(item);
-              return (
-                <List.Item>
-                  <Card className="history-card">
-                    <div className="history-card-content">
-                      <div className="history-image-container">
-                        <LazyLoad height={120} once placeholder={<div className="image-loading"><Spin /></div>}>
-                          <AntImage
-                            src={item.url}
-                            alt={item.name}
-                            className="history-image"
-                            loading="lazy"
-                            preview={{
-                              mask: <div className="image-preview-mask">{t.preview}</div>
-                            }}
-                          />
-                        </LazyLoad>
-                      </div>
-                      <div className="history-item-info">
-                        <h4>{item.name}</h4>
-                        <p>{t.size}: {(item.size / 1024).toFixed(1)} {t.kb}</p>
-                        <p>{t.uploadTime}: {new Date(item.date).toLocaleString()}</p>
-                        <p className="history-item-url">{item.url}</p>
-                      </div>
+            renderItem={(item) => (
+              <List.Item>
+                <Card className="history-card">
+                  <div className="history-card-content">
+                    <div className="history-image-container">
+                      <LazyLoad height={120} offset={100} once placeholder={<div className="image-loading"><Spin /></div>} debounce={100}>
+                        <AntImage
+                          src={item.url}
+                          alt={item.name}
+                          className="history-image"
+                          loading="lazy"
+                          preview={{
+                            mask: <div className="image-preview-mask">{t.preview}</div>
+                          }}
+                          placeholder={<div className="image-loading"><Spin /></div>}
+                        />
+                      </LazyLoad>
                     </div>
-                    <div className="history-item-actions">
-                      <Dropdown
-                        menu={{
-                          items: [
-                            {
-                              key: 'original',
-                              label: (
-                                <a onClick={() => copyToClipboard(links.original)}>{t.originalLink}</a>
-                              ),
-                            },
-                            {
-                              key: 'markdown',
-                              label: (
-                                <a onClick={() => copyToClipboard(links.markdown)}>{t.markdownFormat}</a>
-                              ),
-                            },
-                            {
-                              key: 'markdownWithLink',
-                              label: (
-                                <a onClick={() => copyToClipboard(links.markdownWithLink)}>{t.markdownWithLinkFormat}</a>
-                              ),
-                            },
-                            {
-                              key: 'html',
-                              label: (
-                                <a onClick={() => copyToClipboard(links.html)}>{t.htmlFormat}</a>
-                              ),
-                            },
-                            {
-                              key: 'bbcode',
-                              label: (
-                                <a onClick={() => copyToClipboard(links.bbcode)}>{t.bbcodeFormat}</a>
-                              ),
-                            },
-                          ],
-                        }}
-                      >
-                        <Button type="text" icon={<CopyOutlined />}>
-                          <Space>
-                            {t.copyLink}
-                            <DownOutlined />
-                          </Space>
-                        </Button>
-                      </Dropdown>
-                      <Popconfirm
-                        title={t.deleteConfirmTitle}
-                        description={t.deleteConfirmDesc}
-                        onConfirm={() => deleteRecord(images.findIndex(img => img.date === item.date && img.name === item.name))}
-                        okText={t.confirm}
-                        cancelText={t.cancel}
-                      >
-                        <Button 
-                          type="text" 
-                          danger 
-                          icon={<DeleteOutlined />}
-                        >
-                          {t.deleteRecord}
-                        </Button>
-                      </Popconfirm>
+                    <div className="history-item-info">
+                      <h4>{item.name}</h4>
+                      <p>{t.size}: {(item.size / 1024).toFixed(1)} {t.kb}</p>
+                      <p>{t.uploadTime}: {new Date(item.date).toLocaleString()}</p>
+                      <p className="history-item-url">{item.url}</p>
                     </div>
-                  </Card>
-                </List.Item>
-              );
-            }}
+                  </div>
+                  <div className="history-item-actions">
+                    <CopyLinkButton image={item} />
+                    <Popconfirm
+                      title={t.deleteConfirmTitle}
+                      description={t.deleteConfirmDesc}
+                      onConfirm={() => deleteRecord(images.findIndex(img => img.date === item.date && img.name === item.name))}
+                      okText={t.confirm}
+                      cancelText={t.cancel}
+                    >
+                      <Button 
+                        type="text" 
+                        danger 
+                        icon={<DeleteOutlined />}
+                      >
+                        {t.deleteRecord}
+                      </Button>
+                    </Popconfirm>
+                  </div>
+                </Card>
+              </List.Item>
+            )}
           />
         </div>
       ))}
-
       <div className="pagination-container">
         <Pagination
           current={currentPage}
@@ -547,8 +483,9 @@ const ImageManager = () => {
     </div>
   );
 
+  // 居中标题
   const pageTitle = (
-    <div className="page-title-container">
+    <div className="page-title-container center-title">
       <Button 
         type="text" 
         icon={<ArrowLeftOutlined />} 
@@ -557,54 +494,52 @@ const ImageManager = () => {
       >
         返回
       </Button>
-      <Title level={2} style={{ margin: 0 }}>{t.title}</Title>
+      <Title level={2} style={{ margin: 0, flex: 1, textAlign: 'center' }}>{t.title}</Title>
     </div>
   );
 
   return (
     <div className="image-manager-container">
       <Card title={pageTitle} bordered={false} className="manager-card">
-        <Paragraph>{t.subtitle}</Paragraph>
-        
-        <div className="controls-container">
+        <Paragraph style={{ textAlign: 'center' }}>{t.subtitle}</Paragraph>
+        <div className="controls-container-row">
           <Search
             placeholder={t.search}
             value={searchText}
             onChange={(e) => setSearchText(e.target.value)}
             onSearch={handleSearch}
-            style={{ width: '100%' }}
+            style={{ maxWidth: 260, flex: 1 }}
             allowClear
           />
-          
-          <div className="filter-container">
-            <RangePicker 
-              onChange={handleDateRangeChange} 
-              value={dateRange}
-              placeholder={[t.startDate, t.endDate]}
-            />
-            <Button onClick={clearFilters}>{t.clearFilters}</Button>
-            
-            {settings.enableSync && (
-              <Button 
-                type="primary"
-                icon={<CloudSyncOutlined />}
-                onClick={handleSyncFromCloud}
-                loading={isSyncing}
-              >
-                {isSyncing ? t.syncingFromCloud : t.syncFromCloud}
-              </Button>
-            )}
-          </div>
-        </div>
-        
-        <div className="view-mode-container">
-          <Radio.Group value={viewMode} onChange={handleViewModeChange} buttonStyle="solid">
+          <RangePicker 
+            onChange={handleDateRangeChange} 
+            value={dateRange}
+            placeholder={[t.startDate, t.endDate]}
+            style={{ minWidth: 220 }}
+          />
+          <Button onClick={clearFilters}>{t.clearFilters}</Button>
+          <Dropdown overlay={linkFormatMenu} trigger={['click']}>
+            <Button style={{ minWidth: 140, marginLeft: 8 }}>
+              {texts.zh[selectedFormat + 'Format'] || t.urlFormat} <DownOutlined />
+            </Button>
+          </Dropdown>
+          <div style={{ flex: 1, minWidth: '12px' }} />
+          <Radio.Group value={viewMode} onChange={handleViewModeChange} buttonStyle="solid" style={{ marginRight: 'auto' }}>
             <Radio.Button value="grid">{t.gridView}</Radio.Button>
             <Radio.Button value="timeline">{t.timelineView}</Radio.Button>
           </Radio.Group>
+          {settings.enableSync && (
+            <Button 
+              type="primary"
+              icon={<CloudSyncOutlined />}
+              onClick={handleSyncFromCloud}
+              loading={isSyncing}
+            >
+              {isSyncing ? t.syncingFromCloud : t.syncFromCloud}
+            </Button>
+          )}
         </div>
       </Card>
-
       {filteredImages.length === 0 ? (
         <Empty
           description={
