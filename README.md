@@ -1,124 +1,79 @@
-# HM 图床
+# HM 图床 - 专业、易用的 GitHub 图床应用
 
-一个基于 React 和 Ant Design 的现代化 GitHub 图床工具，支持通过 Gist 进行多设备同步。
+HM 图床是一个现代化、功能丰富的图床应用，它允许您使用自己的 GitHub 仓库作为稳定、免费的图片存储空间。无论您是博主、开发者还是需要频繁分享图片的用户，HM 图床都能提供专业、高效的解决方案。
 
-![应用截图](https://user-images.githubusercontent.com/11287090/211221193-4e4431e4-396a-49a5-a7b2-c063b4f6e3c5.png)
-
----
+![屏幕截图 2025-06-14 104006.jpg](https://cdn.944986.xyz/zhizun62/images1/main/test/20250614_ldprv21K.webp)
+![屏幕截图 2025-06-14 104021.jpg](https://cdn.944986.xyz/zhizun62/images1/main/test/20250614_kj8e6Bk5.webp)
+*(请将上方截图链接替换为您自己的项目截图)*
 
 ## ✨ 功能特性
 
-*   **GitHub 仓库存储**: 使用您自己的 GitHub 仓库作为稳定、免费的图片存储后端。
-*   **现代化 UI**: 基于 Ant Design 的清爽、响应式用户界面。
-*   **图片上传**: 支持拖拽或点击选择图片，自动上传到指定的 GitHub 仓库。
-*   **图片管理**: 浏览、搜索、复制链接和删除已上传的图片。
-*   **多设备同步**: 通过 GitHub Gist 自动同步您的配置和上传历史，在任何设备上保持一致体验。
-*   **自定义域名**: 支持配置 CDN 加速域名，优化图片访问速度。
-*   **多语言支持**: 内置中文和英文语言包。
-*   **一键部署**: 可轻松部署到 Cloudflare Pages 或其他静态网站托管平台。
-*   **安全可靠**: GitHub 令牌通过环境变量配置，不会泄露到客户端代码中。
+- **多种上传方式**：支持拖拽、点击选择、批量上传图片。
+- **自动压缩**：在上传前智能压缩图片，节省存储空间和访问流量。
+- **高度可配置**：
+    -   自定义 GitHub 仓库、分支和存储路径。
+    -   支持自定义 CDN 或图床加速域名。
+- **强大的图片管理**：
+    -   提供**网格**和**时间线**两种视图，方便浏览和管理。
+    -   支持按文件名搜索和按日期范围筛选。
+- **多种链接格式**：一键生成和复制 `URL`, `Markdown`, `HTML` 等多种格式的链接。
+- **☁️ 云同步**：
+    -   使用 GitHub Gist 在多设备间同步您的配置和上传历史。
+    -   一次配置，处处使用。
+- **现代化体验**：
+    -   内置**亮色**与**暗色**主题，随心切换。
+    -   支持**中/英**双语。
+    -   完全响应式设计，在桌面和移动设备上均有完美体验。
 
----
+## 🚀 技术栈
 
-## 🚀 工作原理
+- **前端框架**: [React](https://reactjs.org/)
+- **UI 组件库**: [Ant Design](https://ant.design/)
+- **构建工具**: [Vite](https://vitejs.dev/)
+- **路由**: [React Router](https://reactrouter.com/)
+- **GitHub API**: [Octokit.js](https://github.com/octokit/octokit.js)
+- **状态管理**: React Context
 
-本工具巧妙地利用了 GitHub 提供的两种服务：
+## 🛠️ 开始使用
 
-1.  **GitHub Repository**: 作为图片文件的存储空间。当您上传一张图片时，应用会通过 GitHub API 将图片推送到您指定的仓库和目录中。
-2.  **GitHub Gist**: 作为配置文件 (`settings.json`) 和上传历史 (`history.json`) 的数据库。当您启用云同步后，所有配置和记录都会被安全地存储在一个私密的 Gist 中，从而实现多设备数据同步。
+### 1. 准备 GitHub 个人访问令牌
 
----
+您需要一个具有 `repo` 和 `gist` 权限的 GitHub 个人访问令牌 (Personal Access Token)。
+
+1.  访问 [GitHub 令牌设置页面](https://github.com/settings/tokens)。
+2.  点击 "Generate new token"，选择 "Generate new token (classic)"。
+3.  在 "Note" 中填写一个方便记忆的名称，例如 `hm-image-hosting`。
+4.  在 "Select scopes" 中，务必勾选以下两个权限：
+    -   `repo`：用于读写您的图片仓库。
+    -   `gist`：用于云同步您的配置和历史记录。
+5.  点击 "Generate token" 并复制生成的令牌。**请注意，这个令牌只会显示一次，请妥善保管。**
+
+### 2. 配置应用
+
+1.  打开应用的**设置**页面。
+2.  将上一步生成的令牌粘贴到 "GitHub 访问令牌" 输入框中。
+3.  填写您用于存储图片的 GitHub 用户名（或组织名）、仓库名和分支。如果仓库不存在，您需要先在 GitHub 上创建。
+4.  （可选）填写图片在仓库中存储的路径，例如 `images` 或 `assets/blog`。
+5.  （可选）如果您使用了 CDN 服务来加速 GitHub 仓库的访问，可以将您的 CDN 域名填入"自定义 CDN 域名"中。
+6.  点击**保存设置**。
+
+### 3. 开始上传
+
+返回首页，现在您可以开始上传图片了！上传成功后，您可以在下方的历史记录中找到图片并复制链接。
+
+## ☁️ 关于云同步
+
+当您启用"云同步"功能后，应用会：
+1.  在您的 GitHub Gist 中创建一个私有的 Gist，用于存储配置文件和上传历史。
+2.  在您每次修改设置或上传图片后，自动将数据同步到该 Gist。
+3.  当您在新的设备上登录时，应用会自动从 Gist 拉取数据，恢复您的工作环境。
+
+要使用此功能，请确保您的 GitHub 令牌包含了 `gist` 权限。
 
 ## 部署
 
-推荐使用 [Cloudflare Pages](https://pages.cloudflare.com/) 进行部署，以获得最佳体验。
+您可以轻松地将此项目部署到任何支持静态网站的平台，例如 [Vercel](https://vercel.com/), [Netlify](https://www.netlify.com/) 或 [Cloudflare Pages](https://pages.cloudflare.com/)。
 
-### 1. Fork 本项目
+### 环境变量
 
-首先，将本项目 Fork 到您自己的 GitHub 账户下。
-
-### 2. 创建 GitHub 个人访问令牌 (PAT)
-
-为了让应用能够访问您的 GitHub 仓库和 Gist，您需要创建一个具有相应权限的个人访问令牌。
-
-1.  访问 [GitHub 令牌设置页面](https://github.com/settings/tokens/new)。
-2.  **Note**: 填写一个容易辨识的令牌名称，例如 `image-hosting-pro-token`。
-3.  **Expiration**: 选择一个合适的过期时间。
-4.  **Scopes**: **必须** 同时勾选 `repo` 和 `gist` 两个权限。这是应用正常工作（上传图片和同步设置）所必需的。
-5.  点击 "Generate token" 并 **立即复制生成的新令牌**，这个令牌只会显示一次。
-
-### 3. 在 Cloudflare Pages 中部署
-
-1.  登录到您的 Cloudflare 仪表板，然后转到 **Workers & Pages** > **Create application** > **Pages** > **Connect to Git**。
-2.  选择您刚刚 Fork 的项目仓库。
-3.  在 **Build settings** 步骤中，配置如下：
-    *   **Framework preset**: `Vite`
-    *   **Build command**: `npm run build`
-    *   **Build output directory**: `dist`
-4.  展开 **Environment variables** 部分，添加一个环境变量：
-    *   **Variable name**: `VITE_GITHUB_TOKEN`
-    *   **Value**: 粘贴您在第二步中创建的 GitHub 个人访问令牌。
-    *   强烈建议点击旁边的锁形图标加密此变量。
-5.  点击 **Save and Deploy**，等待部署完成。
-
-部署成功后，您就可以通过 Cloudflare 提供的域名访问您的图床了。
-
----
-
-## ⚙️ 应用配置
-
-访问您部署好的图床网站，并进入 **设置** 页面。
-
-*   **仓库所有者**: 您的 GitHub 用户名或组织名。
-*   **仓库名称**: 您希望用来存储图片的仓库名称（需要预先创建好）。
-*   **分支名称**: 存储图片的分支，通常是 `main` 或 `master`。
-*   **存储路径**: 图片在仓库中存放的目录，例如 `images`。
-*   **启用云同步**: 强烈建议开启此选项，它会自动将您的设置和上传历史同步到云端 Gist。
-
-配置完成后，点击 **保存设置**。
-
----
-
-## 💻 本地开发
-
-如果您希望在本地运行或进行二次开发，请按照以下步骤操作：
-
-1.  **克隆代码**:
-    ```bash
-    git clone https://github.com/your-username/image-hosting-pro.git
-    cd image-hosting-pro
-    ```
-
-2.  **安装依赖**:
-    ```bash
-    npm install
-    ```
-
-3.  **配置环境变量**:
-    在项目根目录下创建一个 `.env.local` 文件，并添加您的 GitHub 令牌：
-    ```
-    VITE_GITHUB_TOKEN=your_github_personal_access_token
-    ```
-
-4.  **启动项目**:
-    ```bash
-    npm run dev
-    ```
-
-    现在，应用将在本地启动，通常地址为 `http://localhost:5173`。
-
----
-
-## 🛠️ 技术栈
-
-*   **前端框架**: [React](https://reactjs.org/)
-*   **UI 组件库**: [Ant Design](https://ant.design/)
-*   **构建工具**: [Vite](https://vitejs.dev/)
-*   **路由**: [React Router](https://reactrouter.com/)
-*   **GitHub API**: [Octokit.js](https://github.com/octokit/octokit.js)
-
----
-
-## 📄 许可证
-
-[MIT](LICENSE) © 2024
+为了增强安全性，建议将 GitHub 令牌配置为环境变量。在部署平台的环境变量设置中，添加一个名为 `VITE_GITHUB_TOKEN` 的变量，并将其值设为您的令牌。应用会自动读取此环境变量。

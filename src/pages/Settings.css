@@ -108,6 +108,10 @@
     padding: 12px;
   }
   
+  .settings-grid {
+    grid-template-columns: 1fr;
+  }
+
   .settings-card {
     margin-bottom: 16px;
   }

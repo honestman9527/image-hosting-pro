@@ -158,7 +158,13 @@
   text-align: right;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 992px) {
+  .file-items {
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  }
+}
+
+@media (max-width: 576px) {
   .file-items {
     grid-template-columns: 1fr;
   }

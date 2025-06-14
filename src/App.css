@@ -78,3 +78,13 @@
 .read-the-docs {
   color: #888;
 }
+
+@media (max-width: 380px) {
+  .app-title {
+    display: none;
+  }
+  
+  .app-header {
+    padding: 0 12px;
+  }
+}

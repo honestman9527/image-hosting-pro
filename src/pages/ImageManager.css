@@ -339,7 +339,7 @@
 }
 
 /* 响应式样式 */
-@media (max-width: 768px) {
+@media (max-width: 992px) {
   .image-manager-container {
     padding: 12px;
   }
@@ -408,7 +408,7 @@
   flex-wrap: wrap;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 992px) {
   .controls-container-row {
     flex-direction: column;
     align-items: stretch;
