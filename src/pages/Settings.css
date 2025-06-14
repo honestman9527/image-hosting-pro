@@ -2,6 +2,7 @@
   max-width: 1200px;
   margin: 0 auto;
   width: 100%;
+  padding: 20px;
 }
 
 .settings-header {
@@ -31,7 +32,7 @@
 
 .settings-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
   gap: 24px;
 }
 
@@ -83,7 +84,7 @@
 }
 
 .about-card {
-  background-color: #f9f9f9;
+  background-color: var(--about-card-background);
 }
 
 .token-steps {
@@ -110,4 +111,12 @@
   .settings-card {
     margin-bottom: 16px;
   }
+}
+
+/* 亮暗主题兼容 */
+:root {
+  --about-card-background: #f9f9f9;
+}
+[data-theme='dark'] {
+  --about-card-background: #222;
 }
