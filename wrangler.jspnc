@@ -1,0 +1,7 @@
+{
+  "name": "hm-image-host",
+  "compatibility_date": "2025-06-14",
+  "assets": {
+    "directory": "./dist"
+  }
+}
